@@ -1,24 +1,40 @@
+<p-toast></p-toast>
+
 <div class="auth-container">
   <div class="auth-card">
-
     <h2>Create Account</h2>
 
-    <form>
-      <input type="text" placeholder="Full Name" required />
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
 
-      <input type="email" placeholder="Email Address" required />
+      <input pInputText type="text" placeholder="Username" formControlName="username" class="w-full mb-2" />
 
-      <input type="password" placeholder="Password" required />
+      <input pInputText type="text" placeholder="Full Name" formControlName="fullName" class="w-full mb-2" />
 
-      <button type="submit" class="btn primary full">
-        Register
-      </button>
+      <input pInputText type="email" placeholder="Email" formControlName="email" class="w-full mb-2" />
+
+      <input pInputText type="text" placeholder="Address" formControlName="address" class="w-full mb-2" />
+
+      <input pInputText type="text" placeholder="Phone (10 digits)" formControlName="phone" class="w-full mb-2" />
+
+      <p-calendar formControlName="birthDate" placeholder="Birth Date" class="w-full mb-2"></p-calendar>
+
+      <p-password formControlName="password" placeholder="Password" class="w-full mb-2"></p-password>
+
+      <p-password formControlName="confirmPassword" placeholder="Confirm Password" [feedback]="false" class="w-full mb-3"></p-password>
+
+      <button
+        pButton
+        type="submit"
+        label="Register"
+        [disabled]="registerForm.invalid"
+        class="w-full"
+      ></button>
+
     </form>
 
-    <p>
+    <p class="mt-3">
       Already have an account?
       <a routerLink="/auth/login">Login</a>
     </p>
-
   </div>
 </div>
