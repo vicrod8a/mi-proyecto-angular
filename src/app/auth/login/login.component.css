@@ -1,3 +1,190 @@
+/* Contenedor general */
+.auth-container {
+  height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Segoe UI', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(0,0,0,0.05)"/><circle cx="80" cy="80" r="2" fill="rgba(0,0,0,0.05)"/><circle cx="40" cy="60" r="1" fill="rgba(0,0,0,0.05)"/></svg>');
+  opacity: 0.3;
+}
+
+/* Card principal */
+.auth-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 40px;
+  border-radius: 15px;
+  width: 420px;
+  max-width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  animation: slideIn 0.6s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.logo-section {
+  margin-bottom: 30px;
+}
+
+.logo-section h2 {
+  margin: 15px 0 10px 0;
+  color: #2c3e50;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.logo-section p {
+  color: #7f8c8d;
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Campos */
+.field {
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.p-input-icon-left {
+  width: 100%;
+}
+
+.p-input-icon-left i {
+  color: #95a5a6;
+  left: 15px;
+}
+
+.p-input-icon-left .p-inputtext,
+.p-password input {
+  padding-left: 45px !important;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  background-color: #ffffff;
+}
+
+.p-input-icon-left .p-inputtext:focus,
+.p-password input:focus {
+  border-color: #6c757d;
+  box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.1);
+}
+
+.p-error {
+  color: #e74c3c;
+  font-size: 0.85rem;
+  margin-top: 5px;
+  display: block;
+}
+
+.field-checkbox {
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.field-checkbox p-checkbox {
+  margin-bottom: 0;
+}
+
+.field-checkbox label {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+/* Botón */
+.login-btn {
+  background: linear-gradient(135deg, #6c757d, #495057);
+  border: none;
+  border-radius: 8px;
+  padding: 15px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.login-btn:disabled {
+  background: #adb5bd;
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.auth-footer {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.auth-footer p {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 0.95rem;
+}
+
+.auth-footer a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.auth-footer a:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
+/* Animación */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 30px 20px;
+    margin: 20px;
+  }
+
+  .logo-section h2 {
+    font-size: 1.8rem;
+  }
+}
+
 /* Botón base moderno */
 .btn {
   position: relative;
@@ -59,26 +246,4 @@
 
 .btn:hover::after {
   left: 100%;
-}
-
-
-
-.auth-card {
-  animation: fadeIn 0.6s ease;
-  transition: transform 0.3s ease;
-}
-
-.auth-card:hover {
-  transform: translateY(-5px);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }

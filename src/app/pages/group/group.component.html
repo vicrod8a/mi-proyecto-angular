@@ -1,0 +1,26 @@
+<app-sidebar></app-sidebar>
+<div class="content" [class.sidebar-collapsed]="!(sidebarService.sidebarVisible$ | async)">
+  <div class="header-top">
+    <button class="menu-toggle" (click)="toggleSidebar()" title="Menú">
+      <i class="pi pi-bars"></i>
+    </button>
+    <h1><i class="pi pi-users"></i> Group</h1>
+  </div>
+
+  <p-card header="Controles" class="group-card">
+    <div class="form-group">
+      <label for="totalInput">Total</label>
+      <input
+        id="totalInput"
+        pInputText
+        type="number"
+        (input)="updateTotal($any($event.target).value)"
+        placeholder="Ingresa un valor"
+      />
+    </div>
+  </p-card>
+
+  <p-card header="Resultado" class="group-card" *ngIf="total !== null">
+    <p>El total ingresado es: <strong>{{ total }}</strong></p>
+  </p-card>
+</div>

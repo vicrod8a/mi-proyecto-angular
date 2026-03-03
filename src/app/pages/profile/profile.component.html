@@ -1,0 +1,136 @@
+<app-sidebar></app-sidebar>
+<div class="content" [class.sidebar-collapsed]="!(sidebarService.sidebarVisible$ | async)">
+  <div class="profile-header">
+    <div class="header-top">
+      <button class="menu-toggle" (click)="toggleSidebar()" title="Menú">
+        <i class="pi pi-bars"></i>
+      </button>
+      <h1><i class="pi pi-user"></i> Mi Perfil</h1>
+    </div>
+    <p>Gestiona tu información personal</p>
+  </div>
+
+  <div class="profile-container">
+    <!-- Avatar Section -->
+    <div class="avatar-section">
+      <img [src]="user.avatar" alt="Avatar del usuario" class="avatar">
+      <h2>{{ user.firstName }} {{ user.lastName }}</h2>
+      <p class="member-since">Miembro desde {{ user.joinDate | date: 'dd/MM/yyyy' }}</p>
+    </div>
+
+    <!-- Profile Information -->
+    <p-card header="Información Personal" class="profile-card">
+      <div *ngIf="!isEditing" class="profile-info">
+        <div class="info-row">
+          <label>Nombre:</label>
+          <span>{{ user.firstName }}</span>
+        </div>
+        <div class="info-row">
+          <label>Apellido:</label>
+          <span>{{ user.lastName }}</span>
+        </div>
+        <div class="info-row">
+          <label>Email:</label>
+          <span>{{ user.email }}</span>
+        </div>
+        <div class="info-row">
+          <label>Teléfono:</label>
+          <span>{{ user.phone }}</span>
+        </div>
+        <div class="info-row">
+          <label>Biografía:</label>
+          <span>{{ user.bio }}</span>
+        </div>
+
+        <div class="button-group">
+          <p-button label="Editar Perfil" icon="pi pi-pencil" (onClick)="toggleEdit()"></p-button>
+        </div>
+      </div>
+
+      <div *ngIf="isEditing" class="profile-form">
+        <div class="form-group">
+          <label for="firstName">Nombre:</label>
+          <input pInputText id="firstName" [(ngModel)]="editingUser.firstName" type="text" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Apellido:</label>
+          <input pInputText id="lastName" [(ngModel)]="editingUser.lastName" type="text" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input pInputText id="email" [(ngModel)]="editingUser.email" type="email" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Teléfono:</label>
+          <input pInputText id="phone" [(ngModel)]="editingUser.phone" type="tel" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="bio">Biografía:</label>
+          <textarea pInputTextarea id="bio" [(ngModel)]="editingUser.bio" class="form-control"></textarea>
+        </div>
+
+        <div class="button-group">
+          <p-button label="Guardar" icon="pi pi-check" (onClick)="saveProfile()" class="p-button-success"></p-button>
+          <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancelEdit()" class="p-button-secondary ml-2"></p-button>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- Account Statistics -->
+    <p-card header="Estadísticas de Cuenta" class="profile-card">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <i class="pi pi-check-circle"></i>
+          <h4>Actividad</h4>
+          <p>125 acciones</p>
+        </div>
+        <div class="stat-card">
+          <i class="pi pi-comment"></i>
+          <h4>Comentarios</h4>
+          <p>48 comentarios</p>
+        </div>
+        <div class="stat-card">
+          <i class="pi pi-flag"></i>
+          <h4>Reportes</h4>
+          <p>12 reportes</p>
+        </div>
+        <div class="stat-card">
+          <i class="pi pi-star"></i>
+          <h4>Calificación</h4>
+          <p>4.8/5.0</p>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- Account Settings -->
+    <p-card header="Configuración de Cuenta" class="profile-card">
+      <div class="settings-list">
+        <div class="setting-item">
+          <div>
+            <h5>Cambiar Contraseña</h5>
+            <p>Actualiza tu contraseña regularmente para mantener tu cuenta segura</p>
+          </div>
+          <p-button label="Cambiar" icon="pi pi-lock" class="p-button-secondary"></p-button>
+        </div>
+        <div class="setting-item">
+          <div>
+            <h5>Notificaciones</h5>
+            <p>Gestiona tus preferencias de notificaciones</p>
+          </div>
+          <p-button label="Configurar" icon="pi pi-bell" class="p-button-secondary"></p-button>
+        </div>
+        <div class="setting-item">
+          <div>
+            <h5>Privacidad</h5>
+            <p>Controla quién puede ver tu perfil</p>
+          </div>
+          <p-button label="Ajustar" icon="pi pi-shield" class="p-button-secondary"></p-button>
+        </div>
+      </div>
+    </p-card>
+  </div>
+</div>

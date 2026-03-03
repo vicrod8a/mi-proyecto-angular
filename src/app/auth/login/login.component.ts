@@ -5,7 +5,9 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
+import { CheckboxModule } from 'primeng/checkbox';
 import { MessageService } from 'primeng/api';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-login',
@@ -13,10 +15,12 @@ import { MessageService } from 'primeng/api';
   imports: [
     RouterModule,
     ReactiveFormsModule,
+    CommonModule,
     InputTextModule,
     PasswordModule,
     ButtonModule,
-    ToastModule
+    ToastModule,
+    CheckboxModule
   ],
   providers: [MessageService],
   templateUrl: './login.component.html',
@@ -25,6 +29,7 @@ import { MessageService } from 'primeng/api';
 export class LoginComponent {
 
   loginForm: FormGroup;
+  loading = false;
 
   // 🔐 Credenciales hardcodeadas
   private readonly HARDCODED_EMAIL = 'admin@test.com';
@@ -37,7 +42,8 @@ export class LoginComponent {
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required]
+      password: ['', Validators.required],
+      rememberMe: [false]
     });
   }
 
@@ -51,26 +57,32 @@ export class LoginComponent {
       return;
     }
 
+    this.loading = true;
+
     const { email, password } = this.loginForm.value;
 
-    if (email === this.HARDCODED_EMAIL && password === this.HARDCODED_PASSWORD) {
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Login correcto',
-        detail: 'Bienvenido al sistema'
-      });
+    // Simular delay de API
+    setTimeout(() => {
+      if (email === this.HARDCODED_EMAIL && password === this.HARDCODED_PASSWORD) {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Login correcto',
+          detail: 'Bienvenido al sistema'
+        });
 
-      // Opcional: redirigir
-      setTimeout(() => {
-        this.router.navigate(['/']);
-      }, 1000);
+        // Opcional: redirigir
+        setTimeout(() => {
+          this.router.navigate(['/home']);
+        }, 1000);
 
-    } else {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Credenciales incorrectas',
-        detail: 'Email o contraseña incorrectos'
-      });
-    }
+      } else {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Credenciales incorrectas',
+          detail: 'Email o contraseña incorrectos'
+        });
+      }
+      this.loading = false;
+    }, 1000);
   }
 }

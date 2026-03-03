@@ -1,0 +1,54 @@
+<div class="sidebar" *ngIf="sidebarVisible">
+  <div class="sidebar-header">
+    <h3><i class="pi pi-bars"></i> Menú</h3>
+    <button class="toggle-btn" (click)="toggleSidebar()" title="Cerrar menú">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+  <p-card>
+    <ul class="menu-list">
+      <li>
+        <a routerLink="/home" routerLinkActive="active">
+          <i class="pi pi-home"></i>
+          <span>Inicio</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/profile">
+          <i class="pi pi-user"></i>
+          <span>Perfil</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/settings">
+          <i class="pi pi-cog"></i>
+          <span>Configuración</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/group">
+          <i class="pi pi-users"></i>
+          <span>Group</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/reports">
+          <i class="pi pi-chart-bar"></i>
+          <span>Reportes</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/auth/login">
+          <i class="pi pi-sign-out"></i>
+          <span>Cerrar Sesión</span>
+        </a>
+      </li>
+    </ul>
+  </p-card>
+</div>
+
+<div *ngIf="!sidebarVisible" class="sidebar-collapsed">
+  <button class="toggle-btn" (click)="toggleSidebar()" title="Abrir menú">
+    <i class="pi pi-bars"></i>
+  </button>
+</div>

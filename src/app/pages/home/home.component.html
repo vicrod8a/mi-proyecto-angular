@@ -1,0 +1,35 @@
+<app-sidebar></app-sidebar>
+<div class="content" [class.sidebar-collapsed]="!(sidebarService.sidebarVisible$ | async)">
+  <div class="dashboard-header">
+    <div class="header-top">
+      <button class="menu-toggle" (click)="toggleSidebar()" title="Menú">
+        <i class="pi pi-bars"></i>
+      </button>
+      <h1><i class="pi pi-home"></i> Panel de Control</h1>
+    </div>
+    <p>Bienvenido a tu panel principal</p>
+  </div>
+
+  <div class="dashboard-grid">
+    <p-card header="Resumen" class="dashboard-card">
+      <p>Esta es tu área de panel principal. Puedes agregar gráficos, estadísticas y otros componentes aquí.</p>
+      <p-button label="Ver Detalles" icon="pi pi-eye" class="mt-3"></p-button>
+    </p-card>
+
+    <p-card header="Actividad Reciente" class="dashboard-card">
+      <ul class="activity-list">
+        <li><i class="pi pi-check-circle"></i> Usuario inició sesión correctamente</li>
+        <li><i class="pi pi-user"></i> Perfil actualizado</li>
+        <li><i class="pi pi-bell"></i> Nueva notificación recibida</li>
+      </ul>
+    </p-card>
+
+    <p-card header="Acciones Rápidas" class="dashboard-card">
+      <div class="action-buttons">
+        <p-button label="Agregar Nuevo" icon="pi pi-plus" class="p-button-success"></p-button>
+        <p-button label="Configuración" icon="pi pi-cog" class="p-button-secondary ml-2"></p-button>
+        <p-button label="Reportes" icon="pi pi-chart-bar" class="p-button-info ml-2"></p-button>
+      </div>
+    </p-card>
+  </div>
+</div>

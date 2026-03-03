@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
@@ -11,6 +12,7 @@ import { MessageService } from 'primeng/api';
   selector: 'app-register',
   standalone: true,
   imports: [
+    CommonModule,
     RouterModule,
     ReactiveFormsModule,
     InputTextModule,
@@ -28,7 +30,8 @@ export class RegisterComponent {
 
   constructor(
     private fb: FormBuilder,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private router: Router
   ) {
     this.registerForm = this.fb.group({
       username: ['', Validators.required],
@@ -72,20 +75,33 @@ export class RegisterComponent {
 
   onSubmit() {
     if (this.registerForm.invalid) {
+      // Marcar todos los campos como tocados para mostrar errores de validación
+      Object.keys(this.registerForm.controls).forEach(key => {
+        const control = this.registerForm.get(key);
+        control?.markAsTouched();
+      });
+
       this.messageService.add({
         severity: 'error',
         summary: 'Formulario inválido',
-        detail: 'Revisa los campos'
+        detail: 'Por favor, revisa todos los campos requeridos'
       });
       return;
     }
 
+    // Simular registro exitoso
     this.messageService.add({
       severity: 'success',
       summary: 'Registro exitoso',
-      detail: 'Cuenta creada correctamente'
+      detail: 'Cuenta creada correctamente. Redirigiendo al inicio de sesión...'
     });
 
+    // Resetear el formulario
     this.registerForm.reset();
+
+    // Redirigir al login después de un breve delay
+    setTimeout(() => {
+      this.router.navigate(['/auth/login']);
+    }, 2000);
   }
 }
