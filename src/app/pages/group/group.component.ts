@@ -5,7 +5,6 @@ import { RouterModule } from '@angular/router';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
-import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
@@ -25,7 +24,6 @@ import { GroupService, Group } from '../../services/group.service';
     SidebarComponent,
     CardModule,
     InputTextModule,
-    InputTextareaModule,
     ButtonModule,
     FormsModule,
     TableModule,

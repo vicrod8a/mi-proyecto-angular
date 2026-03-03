@@ -6,7 +6,6 @@ import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { InputTextareaModule } from 'primeng/inputtextarea';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -24,7 +23,6 @@ import { ProfileService, UserProfile } from '../../services/profile.service';
     CardModule,
     ButtonModule,
     InputTextModule,
-    InputTextareaModule,
     FormsModule,
     DialogModule,
     ToastModule,

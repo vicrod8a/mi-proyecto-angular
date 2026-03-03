@@ -81,9 +81,14 @@ textarea,
   width: 100%;
 }
 
-textarea {
+textarea.form-textarea {
   font-family: Arial, sans-serif;
   resize: vertical;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  width: 100%;
 }
 
 .group-card p {
