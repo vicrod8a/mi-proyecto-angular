@@ -10,7 +10,6 @@ import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DropdownModule } from 'primeng/dropdown';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { SidebarService } from '../../services/sidebar.service';
 import { GroupService, Group } from '../../services/group.service';
@@ -30,8 +29,7 @@ import { GroupService, Group } from '../../services/group.service';
     DialogModule,
     ToastModule,
     ConfirmDialogModule,
-    ReactiveFormsModule,
-    DropdownModule
+    ReactiveFormsModule
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './group.component.html',

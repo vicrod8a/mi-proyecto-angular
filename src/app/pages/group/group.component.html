@@ -80,18 +80,15 @@
     <form [formGroup]="groupForm">
       <div class="form-group">
         <label for="nivel">Nivel *</label>
-        <p-dropdown 
+        <select 
           id="nivel"
           formControlName="nivel"
-          [options]="[
-            { label: 'Básico', value: 'Básico' },
-            { label: 'Intermedio', value: 'Intermedio' },
-            { label: 'Avanzado', value: 'Avanzado' }
-          ]"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Selecciona un nivel">
-        </p-dropdown>
+          class="form-select">
+          <option value="">Selecciona un nivel</option>
+          <option value="Básico">Básico</option>
+          <option value="Intermedio">Intermedio</option>
+          <option value="Avanzado">Avanzado</option>
+        </select>
       </div>
 
       <div class="form-group">

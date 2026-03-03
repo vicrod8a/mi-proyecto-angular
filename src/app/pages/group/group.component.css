@@ -73,7 +73,7 @@
 
 input[pInputText],
 textarea,
-:deep(.p-dropdown) {
+select.form-select {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
