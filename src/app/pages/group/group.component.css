@@ -36,6 +36,21 @@
   transition: all 0.3s ease;
 }
 
+.header-top h1 {
+  margin: 0;
+  color: #333;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions-bar {
+  margin-bottom: 30px;
+  display: flex;
+  gap: 10px;
+}
+
 .group-card {
   margin-bottom: 20px;
   background: white;
@@ -44,18 +59,31 @@
   padding: 20px;
 }
 
-
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 20px;
 }
 
-input[pInputText] {
+.form-group label {
+  font-weight: 600;
+  color: #555;
+}
+
+input[pInputText],
+textarea,
+:deep(.p-dropdown) {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+  width: 100%;
+}
+
+textarea {
+  font-family: Arial, sans-serif;
+  resize: vertical;
 }
 
 .group-card p {
@@ -63,9 +91,52 @@ input[pInputText] {
   color: #333;
 }
 
-.group-card label {
-  font-weight: 600;
-  color: #555;
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-básico {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge-intermedio {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.badge-avanzado {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.ticket-badge {
+  display: inline-block;
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.empty-message {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+:deep(.p-dialog .p-dialog-header) {
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
 }
 
 /* adjust card header */
@@ -73,7 +144,6 @@ input[pInputText] {
   font-size: 1.25rem;
   font-weight: 600;
 }
-
 
 @media (max-width: 768px) {
   .content {

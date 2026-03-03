@@ -1,4 +1,7 @@
 <app-sidebar></app-sidebar>
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
 <div class="content" [class.sidebar-collapsed]="!(sidebarService.sidebarVisible$ | async)">
   <div class="profile-header">
     <div class="header-top">
@@ -43,39 +46,80 @@
         </div>
 
         <div class="button-group">
-          <p-button label="Editar Perfil" icon="pi pi-pencil" (onClick)="toggleEdit()"></p-button>
+          <p-button label="Editar Perfil" icon="pi pi-pencil" (onClick)="toggleEdit()" severity="info"></p-button>
         </div>
       </div>
 
       <div *ngIf="isEditing" class="profile-form">
         <div class="form-group">
-          <label for="firstName">Nombre:</label>
-          <input pInputText id="firstName" [(ngModel)]="editingUser.firstName" type="text" class="form-control">
+          <label for="firstName">Nombre *</label>
+          <input 
+            pInputText 
+            id="firstName" 
+            [(ngModel)]="editingUser.firstName" 
+            type="text" 
+            placeholder="Tu nombre"
+            class="form-control">
         </div>
 
         <div class="form-group">
-          <label for="lastName">Apellido:</label>
-          <input pInputText id="lastName" [(ngModel)]="editingUser.lastName" type="text" class="form-control">
+          <label for="lastName">Apellido *</label>
+          <input 
+            pInputText 
+            id="lastName" 
+            [(ngModel)]="editingUser.lastName" 
+            type="text" 
+            placeholder="Tu apellido"
+            class="form-control">
         </div>
 
         <div class="form-group">
-          <label for="email">Email:</label>
-          <input pInputText id="email" [(ngModel)]="editingUser.email" type="email" class="form-control">
+          <label for="email">Email *</label>
+          <input 
+            pInputText 
+            id="email" 
+            [(ngModel)]="editingUser.email" 
+            type="email" 
+            placeholder="tu.email@ejemplo.com"
+            class="form-control">
         </div>
 
         <div class="form-group">
-          <label for="phone">Teléfono:</label>
-          <input pInputText id="phone" [(ngModel)]="editingUser.phone" type="tel" class="form-control">
+          <label for="phone">Teléfono</label>
+          <input 
+            pInputText 
+            id="phone" 
+            [(ngModel)]="editingUser.phone" 
+            type="tel" 
+            placeholder="+34 666 777 888"
+            class="form-control">
         </div>
 
         <div class="form-group">
-          <label for="bio">Biografía:</label>
-          <textarea pInputTextarea id="bio" [(ngModel)]="editingUser.bio" class="form-control"></textarea>
+          <label for="bio">Biografía</label>
+          <textarea 
+            pInputTextarea 
+            id="bio" 
+            [(ngModel)]="editingUser.bio" 
+            placeholder="Cuéntanos sobre ti"
+            rows="4"
+            class="form-control">
+          </textarea>
         </div>
 
         <div class="button-group">
-          <p-button label="Guardar" icon="pi pi-check" (onClick)="saveProfile()" class="p-button-success"></p-button>
-          <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancelEdit()" class="p-button-secondary ml-2"></p-button>
+          <p-button 
+            label="Guardar" 
+            icon="pi pi-check" 
+            (onClick)="saveProfile()" 
+            severity="success">
+          </p-button>
+          <p-button 
+            label="Cancelar" 
+            icon="pi pi-times" 
+            (onClick)="cancelEdit()" 
+            severity="secondary">
+          </p-button>
         </div>
       </div>
     </p-card>
@@ -114,22 +158,38 @@
             <h5>Cambiar Contraseña</h5>
             <p>Actualiza tu contraseña regularmente para mantener tu cuenta segura</p>
           </div>
-          <p-button label="Cambiar" icon="pi pi-lock" class="p-button-secondary"></p-button>
+          <p-button label="Cambiar" icon="pi pi-lock" severity="secondary"></p-button>
         </div>
         <div class="setting-item">
           <div>
             <h5>Notificaciones</h5>
             <p>Gestiona tus preferencias de notificaciones</p>
           </div>
-          <p-button label="Configurar" icon="pi pi-bell" class="p-button-secondary"></p-button>
+          <p-button label="Configurar" icon="pi pi-bell" severity="secondary"></p-button>
         </div>
         <div class="setting-item">
           <div>
             <h5>Privacidad</h5>
             <p>Controla quién puede ver tu perfil</p>
           </div>
-          <p-button label="Ajustar" icon="pi pi-shield" class="p-button-secondary"></p-button>
+          <p-button label="Ajustar" icon="pi pi-shield" severity="secondary"></p-button>
         </div>
+      </div>
+    </p-card>
+
+    <!-- Danger Zone -->
+    <p-card header="Zona de Peligro" class="profile-card danger-card">
+      <div class="danger-item">
+        <div>
+          <h5>Eliminar Cuenta</h5>
+          <p>Elimina permanentemente tu cuenta y todos tus datos asociados. Esta acción no se puede deshacer.</p>
+        </div>
+        <p-button 
+          label="Eliminar Cuenta" 
+          icon="pi pi-trash" 
+          severity="danger"
+          (onClick)="deleteAccount()">
+        </p-button>
       </div>
     </p-card>
   </div>

@@ -261,6 +261,43 @@ textarea.form-control {
   word-break: break-word;
 }
 
+/* Danger Zone Styles */
+.danger-card {
+  border: 2px solid #f08080 !important;
+  background-color: #fff5f5 !important;
+}
+
+:deep(.danger-card .p-card-header) {
+  background-color: #f08080;
+  color: white;
+  font-weight: 600;
+}
+
+.danger-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #ffe6e6;
+  border-radius: 8px;
+  border-left: 4px solid #d32f2f;
+  gap: 15px;
+}
+
+.danger-item div h5 {
+  margin: 0 0 5px;
+  color: #d32f2f;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.danger-item div p {
+  margin: 0;
+  color: #b71c1c;
+  font-size: 0.9em;
+  word-break: break-word;
+}
+
 .ml-2 {
   margin-left: 10px !important;
 }

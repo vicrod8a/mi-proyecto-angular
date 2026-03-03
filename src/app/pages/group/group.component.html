@@ -1,26 +1,166 @@
 <app-sidebar></app-sidebar>
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
 <div class="content" [class.sidebar-collapsed]="!(sidebarService.sidebarVisible$ | async)">
   <div class="header-top">
     <button class="menu-toggle" (click)="toggleSidebar()" title="Menú">
       <i class="pi pi-bars"></i>
     </button>
-    <h1><i class="pi pi-users"></i> Group</h1>
+    <h1><i class="pi pi-users"></i> Gestión de Grupos</h1>
   </div>
 
-  <p-card header="Controles" class="group-card">
-    <div class="form-group">
-      <label for="totalInput">Total</label>
-      <input
-        id="totalInput"
-        pInputText
-        type="number"
-        (input)="updateTotal($any($event.target).value)"
-        placeholder="Ingresa un valor"
-      />
+  <div class="actions-bar">
+    <p-button 
+      label="Crear Nuevo Grupo" 
+      icon="pi pi-plus" 
+      (onClick)="openNewDialog()"
+      [rounded]="true">
+    </p-button>
+  </div>
+
+  <!-- Tabla de Grupos -->
+  <p-card header="Lista de Grupos" class="group-card">
+    <p-table [value]="groups" [tableStyle]="{ 'min-width': '50rem' }" responsiveLayout="scroll" *ngIf="groups.length > 0">
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="nombre">Nombre <p-sortIcon field="nombre"></p-sortIcon></th>
+          <th pSortableColumn="nivel">Nivel <p-sortIcon field="nivel"></p-sortIcon></th>
+          <th pSortableColumn="autor">Autor <p-sortIcon field="autor"></p-sortIcon></th>
+          <th>Integrantes</th>
+          <th pSortableColumn="tickets">Tickets <p-sortIcon field="tickets"></p-sortIcon></th>
+          <th>Descripción</th>
+          <th>Acciones</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-group>
+        <tr>
+          <td>{{ group.nombre }}</td>
+          <td><span class="badge" [ngClass]="'badge-' + group.nivel.toLowerCase()">{{ group.nivel }}</span></td>
+          <td>{{ group.autor }}</td>
+          <td>{{ group.integrantes }}</td>
+          <td><span class="ticket-badge">{{ group.tickets }}</span></td>
+          <td>{{ group.descripcion | slice:0:50 }}{{ group.descripcion.length > 50 ? '...' : '' }}</td>
+          <td>
+            <div class="action-buttons">
+              <p-button 
+                icon="pi pi-pencil" 
+                [rounded]="true" 
+                [text]="true"
+                severity="info"
+                (onClick)="openEditDialog(group)"
+                title="Editar">
+              </p-button>
+              <p-button 
+                icon="pi pi-trash" 
+                [rounded]="true" 
+                [text]="true"
+                severity="danger"
+                (onClick)="deleteGroup(group)"
+                title="Eliminar">
+              </p-button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+    <div *ngIf="groups.length === 0" class="empty-message">
+      <p>No hay grupos creados aún.</p>
     </div>
   </p-card>
 
-  <p-card header="Resultado" class="group-card" *ngIf="total !== null">
-    <p>El total ingresado es: <strong>{{ total }}</strong></p>
-  </p-card>
+  <!-- Dialog para crear/editar grupo -->
+  <p-dialog 
+    [(visible)]="showDialog" 
+    [header]="isEditing ? 'Editar Grupo' : 'Crear Nuevo Grupo'"
+    [modal]="true" 
+    [style]="{width: '50vw'}"
+    (onHide)="closeDialog()">
+    
+    <form [formGroup]="groupForm">
+      <div class="form-group">
+        <label for="nivel">Nivel *</label>
+        <p-dropdown 
+          id="nivel"
+          formControlName="nivel"
+          [options]="[
+            { label: 'Básico', value: 'Básico' },
+            { label: 'Intermedio', value: 'Intermedio' },
+            { label: 'Avanzado', value: 'Avanzado' }
+          ]"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Selecciona un nivel">
+        </p-dropdown>
+      </div>
+
+      <div class="form-group">
+        <label for="autor">Autor *</label>
+        <input 
+          id="autor"
+          pInputText 
+          formControlName="autor" 
+          placeholder="Nombre del autor"
+          class="w-full">
+      </div>
+
+      <div class="form-group">
+        <label for="nombre">Nombre del Grupo *</label>
+        <input 
+          id="nombre"
+          pInputText 
+          formControlName="nombre" 
+          placeholder="Nombre del grupo"
+          class="w-full">
+      </div>
+
+      <div class="form-group">
+        <label for="integrantes">Integrantes *</label>
+        <textarea 
+          id="integrantes"
+          pInputTextarea
+          formControlName="integrantes" 
+          placeholder="Nombres de los integrantes (separados por comas)"
+          rows="3"
+          class="w-full">
+        </textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="tickets">Tickets *</label>
+        <input 
+          id="tickets"
+          pInputText 
+          type="number"
+          formControlName="tickets" 
+          placeholder="Número de tickets"
+          class="w-full">
+      </div>
+
+      <div class="form-group">
+        <label for="descripcion">Descripción *</label>
+        <textarea 
+          id="descripcion"
+          pInputTextarea
+          formControlName="descripcion" 
+          placeholder="Descripción del grupo"
+          rows="4"
+          class="w-full">
+        </textarea>
+      </div>
+    </form>
+
+    <ng-template #footer>
+      <p-button 
+        label="Cancelar" 
+        (onClick)="closeDialog()"
+        [text]="true">
+      </p-button>
+      <p-button 
+        [label]="isEditing ? 'Actualizar' : 'Crear'" 
+        (onClick)="saveGroup()"
+        icon="pi pi-check">
+      </p-button>
+    </ng-template>
+  </p-dialog>
 </div>
