@@ -2,10 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { SidebarComponent } from '../../components/sidebar/sidebar.component';
-import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
-import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
@@ -20,10 +17,7 @@ import { GroupService, Group } from '../../services/group.service';
   imports: [
     CommonModule,
     RouterModule,
-    SidebarComponent,
-    CardModule,
     InputTextModule,
-    ButtonModule,
     FormsModule,
     TableModule,
     DialogModule,

@@ -4,7 +4,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
-    "types": []
+    "types": [],
+    "paths": {
+      "primeng/resources/themes/*": [
+        "node_modules/@primeng/themes/*"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts"

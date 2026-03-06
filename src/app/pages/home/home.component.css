@@ -1,17 +1,36 @@
-.content {
-  margin-left: 250px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  min-height: 100vh;
-  transition: margin-left 0.3s ease;
-  box-sizing: border-box;
-  width: calc(100% - 250px);
-  overflow-x: hidden;
+/* Dialog/Modal Styles */
+::ng-deep .p-dialog {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  padding: 0;
 }
 
-.content.sidebar-collapsed {
-  margin-left: 70px;
-  width: calc(100% - 70px);
+::ng-deep .p-dialog .p-dialog-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+::ng-deep .p-dialog .p-dialog-content {
+  padding: 1.5rem;
+  background-color: white;
+}
+
+::ng-deep .p-dialog .p-dialog-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+::ng-deep .p-dialog-mask {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+::ng-deep .p-dialog-mask.p-component-overlay {
+  z-index: 1000;
 }
 
 .dashboard-header {

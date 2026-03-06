@@ -1,195 +1,287 @@
-<app-sidebar></app-sidebar>
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
-<div class="content" [class.sidebar-collapsed]="!(sidebarService.sidebarVisible$ | async)">
-  <div class="profile-header">
-    <div class="header-top">
-      <button class="menu-toggle" (click)="toggleSidebar()" title="Menú">
-        <i class="pi pi-bars"></i>
+<div class="min-h-screen bg-gray-50 p-6">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <button class="p-2 rounded-lg hover:bg-gray-200 transition" (click)="toggleSidebar()" title="Menú">
+        <i class="pi pi-bars text-xl"></i>
       </button>
-      <h1><i class="pi pi-user"></i> Mi Perfil</h1>
+      <h1 class="text-3xl font-bold flex items-center gap-3">
+        <i class="pi pi-user"></i>
+        Mi Perfil
+      </h1>
+      <div></div>
     </div>
-    <p>Gestiona tu información personal</p>
+    <p class="text-gray-600 mt-2">Gestiona tu información personal</p>
   </div>
 
-  <div class="profile-container">
+  <div class="max-w-4xl mx-auto space-y-6">
     <!-- Avatar Section -->
-    <div class="avatar-section">
-      <img [src]="user.avatar" alt="Avatar del usuario" class="avatar">
-      <h2>{{ user.firstName }} {{ user.lastName }}</h2>
-      <p class="member-since">Miembro desde {{ user.joinDate | date: 'dd/MM/yyyy' }}</p>
+    <div class="flex flex-col items-center py-8 bg-white rounded-xl shadow">
+      <img [src]="user.avatar" alt="Avatar del usuario" class="w-24 h-24 rounded-full border-4 border-blue-500">
+      <h2 class="text-2xl font-bold mt-4">{{ user.firstName }} {{ user.lastName }}</h2>
+      <p class="text-gray-500 mt-1">Miembro desde {{ user.joinDate | date: 'dd/MM/yyyy' }}</p>
     </div>
 
-    <!-- Profile Information -->
-    <p-card header="Información Personal" class="profile-card">
-      <div *ngIf="!isEditing" class="profile-info">
-        <div class="info-row">
-          <label>Nombre:</label>
-          <span>{{ user.firstName }}</span>
+    <!-- Profile Information Card -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+        <i class="pi pi-info-circle text-blue-600"></i>
+        Información Personal
+      </h3>
+
+      <div *ngIf="!isEditing" class="space-y-4">
+        <div class="flex items-center justify-between py-3 border-b">
+          <label class="font-semibold text-gray-700">Usuario:</label>
+          <span class="text-gray-600">{{ user.username }}</span>
         </div>
-        <div class="info-row">
-          <label>Apellido:</label>
-          <span>{{ user.lastName }}</span>
+        <div class="flex items-center justify-between py-3 border-b">
+          <label class="font-semibold text-gray-700">Nombre Completo:</label>
+          <span class="text-gray-600">{{ user.firstName }} {{ user.lastName }}</span>
         </div>
-        <div class="info-row">
-          <label>Email:</label>
-          <span>{{ user.email }}</span>
+        <div class="flex items-center justify-between py-3 border-b">
+          <label class="font-semibold text-gray-700">Email:</label>
+          <span class="text-gray-600">{{ user.email }}</span>
         </div>
-        <div class="info-row">
-          <label>Teléfono:</label>
-          <span>{{ user.phone }}</span>
+        <div class="flex items-center justify-between py-3 border-b">
+          <label class="font-semibold text-gray-700">Teléfono:</label>
+          <span class="text-gray-600">{{ user.phone }}</span>
         </div>
-        <div class="info-row">
-          <label>Biografía:</label>
-          <span>{{ user.bio }}</span>
+        <div class="flex items-center justify-between py-3 border-b">
+          <label class="font-semibold text-gray-700">Dirección:</label>
+          <span class="text-gray-600">{{ user.address }}</span>
+        </div>
+        <div class="flex items-center justify-between py-3">
+          <label class="font-semibold text-gray-700">Fecha de Nacimiento:</label>
+          <span class="text-gray-600">{{ user.birthDate | date: 'dd/MM/yyyy' }}</span>
         </div>
 
-        <div class="button-group">
-          <p-button label="Editar Perfil" icon="pi pi-pencil" (onClick)="toggleEdit()" severity="info"></p-button>
+        <div class="mt-6">
+          <button 
+            (click)="toggleEdit()" 
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition">
+            <i class="pi pi-pencil"></i>
+            Editar Perfil
+          </button>
         </div>
       </div>
 
-      <div *ngIf="isEditing" class="profile-form">
-        <div class="form-group">
-          <label for="firstName">Nombre *</label>
+      <div *ngIf="isEditing" class="space-y-4">
+        <div>
+          <label for="username" class="block font-semibold text-gray-700 mb-2">Nombre de Usuario *</label>
           <input 
             pInputText 
-            id="firstName" 
-            [(ngModel)]="editingUser.firstName" 
+            id="username" 
+            [(ngModel)]="editingUser.username" 
             type="text" 
-            placeholder="Tu nombre"
-            class="form-control">
+            placeholder="Elige un nombre de usuario"
+            class="w-full border border-gray-300 rounded-lg p-2">
         </div>
 
-        <div class="form-group">
-          <label for="lastName">Apellido *</label>
-          <input 
-            pInputText 
-            id="lastName" 
-            [(ngModel)]="editingUser.lastName" 
-            type="text" 
-            placeholder="Tu apellido"
-            class="form-control">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="firstName" class="block font-semibold text-gray-700 mb-2">Nombre Completo *</label>
+            <input 
+              pInputText 
+              id="firstName" 
+              [(ngModel)]="editingUser.firstName" 
+              type="text" 
+              placeholder="Tu nombre"
+              class="w-full border border-gray-300 rounded-lg p-2">
+          </div>
+
+          <div>
+            <label for="lastName" class="block font-semibold text-gray-700 mb-2">Apellido *</label>
+            <input 
+              pInputText 
+              id="lastName" 
+              [(ngModel)]="editingUser.lastName" 
+              type="text" 
+              placeholder="Tu apellido"
+              class="w-full border border-gray-300 rounded-lg p-2">
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="email">Email *</label>
+        <div>
+          <label for="email" class="block font-semibold text-gray-700 mb-2">Correo Electrónico *</label>
           <input 
             pInputText 
             id="email" 
             [(ngModel)]="editingUser.email" 
             type="email" 
-            placeholder="tu.email@ejemplo.com"
-            class="form-control">
+            placeholder="Ingresa tu correo electrónico"
+            class="w-full border border-gray-300 rounded-lg p-2">
         </div>
 
-        <div class="form-group">
-          <label for="phone">Teléfono</label>
+        <div>
+          <label for="phone" class="block font-semibold text-gray-700 mb-2">Número de Teléfono *</label>
           <input 
             pInputText 
             id="phone" 
             [(ngModel)]="editingUser.phone" 
             type="tel" 
-            placeholder="+34 666 777 888"
-            class="form-control">
+            placeholder="Ingresa tu número de teléfono"
+            class="w-full border border-gray-300 rounded-lg p-2">
         </div>
 
-        <div class="form-group">
-          <label for="bio">Biografía</label>
-          <textarea 
-            id="bio" 
-            [(ngModel)]="editingUser.bio" 
-            placeholder="Cuéntanos sobre ti"
-            rows="4"
-            class="form-textarea">
-          </textarea>
-        </div>
-
-        <div class="button-group">
-          <p-button 
-            label="Guardar" 
-            icon="pi pi-check" 
-            (onClick)="saveProfile()" 
-            severity="success">
-          </p-button>
-          <p-button 
-            label="Cancelar" 
-            icon="pi pi-times" 
-            (onClick)="cancelEdit()" 
-            severity="secondary">
-          </p-button>
-        </div>
-      </div>
-    </p-card>
-
-    <!-- Account Statistics -->
-    <p-card header="Estadísticas de Cuenta" class="profile-card">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <i class="pi pi-check-circle"></i>
-          <h4>Actividad</h4>
-          <p>125 acciones</p>
-        </div>
-        <div class="stat-card">
-          <i class="pi pi-comment"></i>
-          <h4>Comentarios</h4>
-          <p>48 comentarios</p>
-        </div>
-        <div class="stat-card">
-          <i class="pi pi-flag"></i>
-          <h4>Reportes</h4>
-          <p>12 reportes</p>
-        </div>
-        <div class="stat-card">
-          <i class="pi pi-star"></i>
-          <h4>Calificación</h4>
-          <p>4.8/5.0</p>
-        </div>
-      </div>
-    </p-card>
-
-    <!-- Account Settings -->
-    <p-card header="Configuración de Cuenta" class="profile-card">
-      <div class="settings-list">
-        <div class="setting-item">
-          <div>
-            <h5>Cambiar Contraseña</h5>
-            <p>Actualiza tu contraseña regularmente para mantener tu cuenta segura</p>
-          </div>
-          <p-button label="Cambiar" icon="pi pi-lock" severity="secondary"></p-button>
-        </div>
-        <div class="setting-item">
-          <div>
-            <h5>Notificaciones</h5>
-            <p>Gestiona tus preferencias de notificaciones</p>
-          </div>
-          <p-button label="Configurar" icon="pi pi-bell" severity="secondary"></p-button>
-        </div>
-        <div class="setting-item">
-          <div>
-            <h5>Privacidad</h5>
-            <p>Controla quién puede ver tu perfil</p>
-          </div>
-          <p-button label="Ajustar" icon="pi pi-shield" severity="secondary"></p-button>
-        </div>
-      </div>
-    </p-card>
-
-    <!-- Danger Zone -->
-    <p-card header="Zona de Peligro" class="profile-card danger-card">
-      <div class="danger-item">
         <div>
-          <h5>Eliminar Cuenta</h5>
-          <p>Elimina permanentemente tu cuenta y todos tus datos asociados. Esta acción no se puede deshacer.</p>
+          <label for="address" class="block font-semibold text-gray-700 mb-2">Dirección *</label>
+          <input 
+            pInputText 
+            id="address" 
+            [(ngModel)]="editingUser.address" 
+            type="text" 
+            placeholder="Ingresa tu dirección"
+            class="w-full border border-gray-300 rounded-lg p-2">
         </div>
-        <p-button 
-          label="Eliminar Cuenta" 
-          icon="pi pi-trash" 
-          severity="danger"
-          (onClick)="deleteAccount()">
-        </p-button>
+
+        <div>
+          <label for="birthDate" class="block font-semibold text-gray-700 mb-2">Fecha de Nacimiento *</label>
+          <input 
+            pInputText 
+            id="birthDate" 
+            [(ngModel)]="editingUser.birthDate" 
+            type="date" 
+            placeholder="mm/dd/yyyy"
+            class="w-full border border-gray-300 rounded-lg p-2">
+        </div>
+
+        <div class="border-t pt-4">
+          <h4 class="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <i class="pi pi-lock text-yellow-600"></i>
+            Cambiar Contraseña (Opcional)
+          </h4>
+
+          <div>
+            <label for="password" class="block font-semibold text-gray-700 mb-2">Contraseña</label>
+            <input 
+              pInputText 
+              id="password" 
+              [(ngModel)]="editingUser.password" 
+              type="password" 
+              placeholder="Crea una contraseña"
+              class="w-full border border-gray-300 rounded-lg p-2">
+          </div>
+
+          <div class="mt-3">
+            <label for="confirmPassword" class="block font-semibold text-gray-700 mb-2">Confirmar Contraseña</label>
+            <input 
+              pInputText 
+              id="confirmPassword" 
+              [(ngModel)]="editingUser.confirmPassword" 
+              type="password" 
+              placeholder="Confirma tu contraseña"
+              class="w-full border border-gray-300 rounded-lg p-2">
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button 
+            (click)="saveProfile()" 
+            class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition">
+            <i class="pi pi-check"></i>
+            Guardar
+          </button>
+          <button 
+            (click)="cancelEdit()" 
+            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition">
+            <i class="pi pi-times"></i>
+            Cancelar
+          </button>
+        </div>
       </div>
-    </p-card>
+    </div>
+
+    <!-- Account Statistics Card -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+        <i class="pi pi-chart-bar text-blue-600"></i>
+        Estadísticas de Cuenta
+      </h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-blue-50 p-4 rounded-lg text-center">
+          <i class="pi pi-check-circle text-blue-600 text-2xl"></i>
+          <h4 class="font-semibold mt-2">Actividad</h4>
+          <p class="text-gray-600">125 acciones</p>
+        </div>
+        <div class="bg-green-50 p-4 rounded-lg text-center">
+          <i class="pi pi-comment text-green-600 text-2xl"></i>
+          <h4 class="font-semibold mt-2">Comentarios</h4>
+          <p class="text-gray-600">48 comentarios</p>
+        </div>
+        <div class="bg-yellow-50 p-4 rounded-lg text-center">
+          <i class="pi pi-flag text-yellow-600 text-2xl"></i>
+          <h4 class="font-semibold mt-2">Reportes</h4>
+          <p class="text-gray-600">12 reportes</p>
+        </div>
+        <div class="bg-purple-50 p-4 rounded-lg text-center">
+          <i class="pi pi-star text-purple-600 text-2xl"></i>
+          <h4 class="font-semibold mt-2">Calificación</h4>
+          <p class="text-gray-600">4.8/5.0</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Settings Card -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+        <i class="pi pi-cog text-blue-600"></i>
+        Configuración de Cuenta
+      </h3>
+      <div class="space-y-4">
+        <div class="flex items-center justify-between py-4 border-b">
+          <div>
+            <h5 class="font-semibold">Cambiar Contraseña</h5>
+            <p class="text-gray-500 text-sm">Actualiza tu contraseña regularmente para mantener tu cuenta segura</p>
+          </div>
+          <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
+            <i class="pi pi-lock"></i>
+            Cambiar
+          </button>
+        </div>
+        <div class="flex items-center justify-between py-4 border-b">
+          <div>
+            <h5 class="font-semibold">Notificaciones</h5>
+            <p class="text-gray-500 text-sm">Gestiona tus preferencias de notificaciones</p>
+          </div>
+          <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
+            <i class="pi pi-bell"></i>
+            Configurar
+          </button>
+        </div>
+        <div class="flex items-center justify-between py-4">
+          <div>
+            <h5 class="font-semibold">Privacidad</h5>
+            <p class="text-gray-500 text-sm">Controla quién puede ver tu perfil</p>
+          </div>
+          <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
+            <i class="pi pi-shield"></i>
+            Ajustar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger Zone Card -->
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-red-500">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-2 text-red-600">
+        <i class="pi pi-exclamation-triangle"></i>
+        Zona de Peligro
+      </h3>
+      <div class="flex items-center justify-between">
+        <div>
+          <h5 class="font-semibold">Eliminar Cuenta</h5>
+          <p class="text-gray-500 text-sm">Elimina permanentemente tu cuenta y todos tus datos asociados. Esta acción no se puede deshacer.</p>
+        </div>
+        <button 
+          (click)="deleteAccount()"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
+          <i class="pi pi-trash"></i>
+          Eliminar
+        </button>
+      </div>
+    </div>
   </div>
 </div>

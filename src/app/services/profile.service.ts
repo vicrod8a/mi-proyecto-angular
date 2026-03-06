@@ -3,11 +3,15 @@ import { BehaviorSubject, Observable } from 'rxjs';
 
 export interface UserProfile {
   id: number;
+  username: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
-  bio: string;
+  address: string;
+  birthDate: string;
+  password?: string;
+  confirmPassword?: string;
   avatar: string;
   joinDate: string;
 }
@@ -18,11 +22,13 @@ export interface UserProfile {
 export class ProfileService {
   private currentUser: UserProfile = {
     id: 1,
+    username: 'juanperez',
     firstName: 'Juan',
     lastName: 'Pérez',
     email: 'juan.perez@example.com',
     phone: '+34 666 777 888',
-    bio: 'Desarrollador Full Stack apasionado por la tecnología y la innovación.',
+    address: 'Calle Principal 123, Madrid',
+    birthDate: '1990-05-15',
     avatar: 'https://via.placeholder.com/200',
     joinDate: '2024-01-15'
   };

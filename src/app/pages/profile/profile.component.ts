@@ -2,9 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { SidebarComponent } from '../../components/sidebar/sidebar.component';
-import { CardModule } from 'primeng/card';
-import { ButtonModule } from 'primeng/button';
+
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
@@ -19,9 +17,6 @@ import { ProfileService, UserProfile } from '../../services/profile.service';
   imports: [
     CommonModule,
     RouterModule,
-    SidebarComponent,
-    CardModule,
-    ButtonModule,
     InputTextModule,
     FormsModule,
     DialogModule,
@@ -70,11 +65,23 @@ export class ProfileComponent implements OnInit {
 
   saveProfile() {
     // Validar campos obligatorios
-    if (!this.editingUser.firstName || !this.editingUser.lastName || !this.editingUser.email) {
+    if (!this.editingUser.username || !this.editingUser.firstName || !this.editingUser.lastName || !this.editingUser.email || !this.editingUser.phone || !this.editingUser.address || !this.editingUser.birthDate) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campos inválidos',
-        detail: 'Por favor completa todos los campos obligatorios'
+        detail: 'Por favor completa todos los campos obligatorios',
+        styleClass: 'custom-toast'
+      });
+      return;
+    }
+
+    // Validar que las contraseñas coincidan si se ingresan
+    if (this.editingUser.password && this.editingUser.password !== this.editingUser.confirmPassword) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Las contraseñas no coinciden',
+        styleClass: 'custom-toast'
       });
       return;
     }
@@ -85,7 +92,8 @@ export class ProfileComponent implements OnInit {
     this.messageService.add({
       severity: 'success',
       summary: 'Éxito',
-      detail: 'Perfil actualizado correctamente'
+      detail: 'Perfil actualizado correctamente',
+      styleClass: 'custom-toast'
     });
   }
 
@@ -104,7 +112,8 @@ export class ProfileComponent implements OnInit {
         this.messageService.add({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Cuenta eliminada correctamente'
+          detail: 'Cuenta eliminada correctamente',
+          styleClass: 'custom-toast'
         });
         
         setTimeout(() => {

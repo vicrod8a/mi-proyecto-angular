@@ -1,35 +1,75 @@
-<app-sidebar></app-sidebar>
-<div class="content" [class.sidebar-collapsed]="!(sidebarService.sidebarVisible$ | async)">
-  <div class="dashboard-header">
-    <div class="header-top">
-      <button class="menu-toggle" (click)="toggleSidebar()" title="Menú">
-        <i class="pi pi-bars"></i>
+<div class="min-h-screen bg-gray-50 p-6">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <button class="p-2 rounded-lg hover:bg-gray-200 transition" (click)="toggleSidebar()" title="Menú">
+        <i class="pi pi-bars text-xl"></i>
       </button>
-      <h1><i class="pi pi-home"></i> Panel de Control</h1>
+      <h1 class="text-3xl font-bold flex items-center gap-3">
+        <i class="pi pi-home"></i>
+        Panel de Control
+      </h1>
+      <div></div>
     </div>
-    <p>Bienvenido a tu panel principal</p>
+    <p class="text-gray-600 mt-2">Bienvenido a tu panel principal</p>
   </div>
 
-  <div class="dashboard-grid">
-    <p-card header="Resumen" class="dashboard-card">
-      <p>Esta es tu área de panel principal. Puedes agregar gráficos, estadísticas y otros componentes aquí.</p>
-      <p-button label="Ver Detalles" icon="pi pi-eye" class="mt-3"></p-button>
-    </p-card>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Summary Card -->
+    <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
+      <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+        <i class="pi pi-info-circle text-blue-600"></i>
+        Resumen
+      </h3>
+      <p class="text-gray-600 mb-4">Esta es tu área de panel principal. Puedes agregar gráficos, estadísticas y otros componentes aquí.</p>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+        <i class="pi pi-eye"></i>
+        Ver Detalles
+      </button>
+    </div>
 
-    <p-card header="Actividad Reciente" class="dashboard-card">
-      <ul class="activity-list">
-        <li><i class="pi pi-check-circle"></i> Usuario inició sesión correctamente</li>
-        <li><i class="pi pi-user"></i> Perfil actualizado</li>
-        <li><i class="pi pi-bell"></i> Nueva notificación recibida</li>
+    <!-- Recent Activity Card -->
+    <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
+      <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+        <i class="pi pi-history text-green-600"></i>
+        Actividad Reciente
+      </h3>
+      <ul class="space-y-3">
+        <li class="flex items-center gap-2 text-gray-700">
+          <i class="pi pi-check-circle text-green-600"></i>
+          Usuario inició sesión correctamente
+        </li>
+        <li class="flex items-center gap-2 text-gray-700">
+          <i class="pi pi-user text-blue-600"></i>
+          Perfil actualizado
+        </li>
+        <li class="flex items-center gap-2 text-gray-700">
+          <i class="pi pi-bell text-yellow-600"></i>
+          Nueva notificación recibida
+        </li>
       </ul>
-    </p-card>
+    </div>
 
-    <p-card header="Acciones Rápidas" class="dashboard-card">
-      <div class="action-buttons">
-        <p-button label="Agregar Nuevo" icon="pi pi-plus" class="p-button-success"></p-button>
-        <p-button label="Configuración" icon="pi pi-cog" class="p-button-secondary ml-2"></p-button>
-        <p-button label="Reportes" icon="pi pi-chart-bar" class="p-button-info ml-2"></p-button>
+    <!-- Quick Actions Card -->
+    <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
+      <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+        <i class="pi pi-lightning text-purple-600"></i>
+        Acciones Rápidas
+      </h3>
+      <div class="flex flex-col gap-3">
+        <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition justify-center">
+          <i class="pi pi-plus"></i>
+          Agregar Nuevo
+        </button>
+        <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition justify-center">
+          <i class="pi pi-cog"></i>
+          Configuración
+        </button>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition justify-center">
+          <i class="pi pi-chart-bar"></i>
+          Reportes
+        </button>
       </div>
-    </p-card>
+    </div>
   </div>
 </div>
