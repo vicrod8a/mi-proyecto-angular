@@ -75,7 +75,7 @@ export class GroupComponent implements OnInit {
   // utility for testing permission behaviour
   revokeGroupAdd() {
     const perms = this.permissionService.permissions();
-    const filtered = perms.filter(p => p !== 'groups_add' && p !== 'group_add');
+    const filtered = perms.filter((p: string) => p !== 'groups_add' && p !== 'group_add');
     this.permissionService.setPermissions(filtered);
     this.messageService.add({
       severity: 'info',
