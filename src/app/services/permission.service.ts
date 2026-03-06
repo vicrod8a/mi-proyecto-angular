@@ -18,7 +18,8 @@ export class PermissionService {
    */
   loadPermissions(): Observable<any> {
     console.log('[PermissionService] loading permissions from assets');
-    return this.http.get('/assets/permissions.json');
+    // use relative path without leading slash to avoid base-href issues
+    return this.http.get('assets/permissions.json');
   }
 
   /**
