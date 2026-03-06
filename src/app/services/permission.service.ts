@@ -1,4 +1,4 @@
-import { Injectable, signal, ComputedSignal } from '@angular/core';
+import { Injectable, signal, Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
@@ -8,7 +8,7 @@ export class PermissionService {
   private _permissions = signal<string[]>([]);
 
   // readonly accessor that components/directives can rely on
-  public readonly permissions: ComputedSignal<string[]> = this._permissions;
+  public readonly permissions: Signal<string[]> = this._permissions;
 
   constructor(private http: HttpClient) {}
 
