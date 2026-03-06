@@ -26,4 +26,9 @@ export class AppComponent implements OnInit {
       this.permService.setPermissions(perms);
     });
   }
+
+  // helper callable from console: app.reloadPerms()
+  reloadPerms() {
+    this.permService.reloadPermissions();
+  }
 }
