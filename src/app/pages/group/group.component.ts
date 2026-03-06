@@ -72,28 +72,7 @@ export class GroupComponent implements OnInit {
     this.sidebarService.toggleSidebar();
   }
 
-  // utility for testing permission behaviour
-  revokeGroupAdd() {
-    const perms = this.permissionService.permissions();
-    const filtered = perms.filter((p: string) => p !== 'groups_add' && p !== 'group_add');
-    this.permissionService.setPermissions(filtered);
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Permisos actualizados',
-      detail: 'Se han eliminado los permisos de creación de grupos'
-    });
-  }
 
-  revokeGroupDelete() {
-    const perms = this.permissionService.permissions();
-    const filtered = perms.filter((p: string) => p !== 'groups_delete' && p !== 'group_delete');
-    this.permissionService.setPermissions(filtered);
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Permisos actualizados',
-      detail: 'Se han eliminado los permisos de eliminación de grupos'
-    });
-  }
 
   openNewDialog() {
     this.isEditing = false;
