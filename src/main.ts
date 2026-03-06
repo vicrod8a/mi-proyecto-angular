@@ -4,6 +4,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { providePrimeNG } from 'primeng/config';
+import { provideHttpClient } from '@angular/common/http';
 // theme CSS will be loaded via CDN links in index.html
 
 bootstrapApplication(AppComponent, {
@@ -13,6 +14,7 @@ bootstrapApplication(AppComponent, {
     providePrimeNG({
       // disable built-in theme import; using CDN links instead
       theme: 'none'
-    })
+    }),
+    provideHttpClient()
   ]
 });
