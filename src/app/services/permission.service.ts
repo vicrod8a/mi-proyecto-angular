@@ -21,6 +21,21 @@ export class PermissionService {
   }
 
   /**
+   * Helper to fetch and apply permissions from JSON immediately.
+   */
+  reloadPermissions(): void {
+    this.loadPermissions().subscribe((data: any) => {
+      const perms: string[] = [];
+      Object.values(data).forEach((arr: any) => {
+        if (Array.isArray(arr)) {
+          perms.push(...arr);
+        }
+      });
+      this.setPermissions(perms);
+    });
+  }
+
+  /**
    * Replace the current set of permissions with a new list.
    */
   setPermissions(perms: string[]) {
