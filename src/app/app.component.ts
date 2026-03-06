@@ -15,15 +15,22 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     // load mock permissions JSON and apply
-    this.permService.loadPermissions().subscribe((data: any) => {
-      // flatten arrays to single list
-      const perms: string[] = [];
-      Object.values(data).forEach((arr: any) => {
-        if (Array.isArray(arr)) {
-          perms.push(...arr);
-        }
-      });
-      this.permService.setPermissions(perms);
+    this.permService.loadPermissions().subscribe({
+      next: (data: any) => {
+        console.log('[AppComponent] permissions data', data);
+        // flatten arrays to single list
+        const perms: string[] = [];
+        Object.values(data).forEach((arr: any) => {
+          if (Array.isArray(arr)) {
+            perms.push(...arr);
+          }
+        });
+        this.permService.setPermissions(perms);
+        console.log('[AppComponent] applied perms', perms);
+      },
+      error: err => {
+        console.error('Failed to load permissions', err);
+      }
     });
   }
 

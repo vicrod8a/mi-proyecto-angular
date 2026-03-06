@@ -17,6 +17,7 @@ export class PermissionService {
    * The caller can subscribe to the observable or await the promise.
    */
   loadPermissions(): Observable<any> {
+    console.log('[PermissionService] loading permissions from assets');
     return this.http.get('/assets/permissions.json');
   }
 
