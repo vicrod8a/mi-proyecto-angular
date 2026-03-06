@@ -21,20 +21,29 @@
   <!-- BOTÓN CREAR -->
   <div class="mb-6 flex items-center gap-4">
     <button *ifHasPermission="'groups_add'"
+      *ifHasPermission="'groups_add'"
       (click)="openNewDialog()"
       class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition"
     >
       <i class="pi pi-plus"></i>
       Crear Nuevo Grupo
     </button>
-    <!-- demo button to revoke permission -->
+    <!-- demo buttons to revoke permissions -->
     <button
       (click)="revokeGroupAdd()"
       class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-      title="Revoke groups_add permission"
+      title="Revocar permiso de creación"
     >
       <i class="pi pi-ban"></i>
-      Revocar permiso
+      Quitar crear
+    </button>
+    <button
+      (click)="revokeGroupDelete()"
+      class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+      title="Revocar permiso de eliminación"
+    >
+      <i class="pi pi-ban"></i>
+      Quitar eliminar
     </button>
   </div>
 
@@ -109,6 +118,7 @@
               </button>
 
               <button
+                *ifHasPermission="'groups_delete'"
                 (click)="deleteGroup(group)"
                 class="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
                 title="Eliminar"

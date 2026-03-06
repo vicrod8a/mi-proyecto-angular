@@ -84,6 +84,17 @@ export class GroupComponent implements OnInit {
     });
   }
 
+  revokeGroupDelete() {
+    const perms = this.permissionService.permissions();
+    const filtered = perms.filter((p: string) => p !== 'groups_delete' && p !== 'group_delete');
+    this.permissionService.setPermissions(filtered);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Permisos actualizados',
+      detail: 'Se han eliminado los permisos de eliminación de grupos'
+    });
+  }
+
   openNewDialog() {
     this.isEditing = false;
     this.selectedGroup = null;
