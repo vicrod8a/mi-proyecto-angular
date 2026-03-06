@@ -19,13 +19,22 @@
   </div>
 
   <!-- BOTÓN CREAR -->
-  <div class="mb-6">
-    <button
+  <div class="mb-6 flex items-center gap-4">
+    <button *ifHasPermission="'groups_add'"
       (click)="openNewDialog()"
       class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition"
     >
       <i class="pi pi-plus"></i>
       Crear Nuevo Grupo
+    </button>
+    <!-- demo button to revoke permission -->
+    <button
+      (click)="revokeGroupAdd()"
+      class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+      title="Revoke groups_add permission"
+    >
+      <i class="pi pi-ban"></i>
+      Revocar permiso
     </button>
   </div>
 

@@ -10,6 +10,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { SidebarService } from '../../services/sidebar.service';
 import { GroupService, Group } from '../../services/group.service';
+import { IfHasPermissionDirective } from '../../directives/if-has-permission.directive'; 
+import { PermissionService } from '../../services/permission.service';
 
 @Component({
   selector: 'app-group',
@@ -23,7 +25,8 @@ import { GroupService, Group } from '../../services/group.service';
     DialogModule,
     ToastModule,
     ConfirmDialogModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    IfHasPermissionDirective
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './group.component.html',
@@ -36,12 +39,14 @@ export class GroupComponent implements OnInit {
   groupForm: FormGroup;
   selectedGroup: Group | null = null;
 
+
   constructor(
     public sidebarService: SidebarService,
     private groupService: GroupService,
     private fb: FormBuilder,
     private messageService: MessageService,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private permissionService: PermissionService
   ) {
     this.groupForm = this.fb.group({
       nivel: ['', Validators.required],
@@ -65,6 +70,18 @@ export class GroupComponent implements OnInit {
 
   toggleSidebar() {
     this.sidebarService.toggleSidebar();
+  }
+
+  // utility for testing permission behaviour
+  revokeGroupAdd() {
+    const perms = this.permissionService.permissions();
+    const filtered = perms.filter(p => p !== 'groups_add' && p !== 'group_add');
+    this.permissionService.setPermissions(filtered);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Permisos actualizados',
+      detail: 'Se han eliminado los permisos de creación de grupos'
+    });
   }
 
   openNewDialog() {
