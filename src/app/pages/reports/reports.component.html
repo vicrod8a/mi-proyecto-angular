@@ -1,0 +1,11 @@
+<div class="p-6 min-h-screen bg-gray-50">
+  <h1 class="text-2xl font-bold mb-4">Reportes - {{ reportType | titlecase }}</h1>
+
+  <div *ngIf="chartData" class="bg-white rounded-xl shadow p-6 h-96">
+    <p-chart [type]="reportType === 'groups' ? 'pie' : (reportType === 'tickets' ? 'bar' : 'line')"
+             [data]="chartData"
+             [options]="chartOptions"
+             style="height:100%"></p-chart>
+  </div>
+  <div *ngIf="!chartData" class="text-gray-600">Seleccione un tipo de reporte válido.</div>
+</div>

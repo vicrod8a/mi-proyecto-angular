@@ -1,0 +1,37 @@
+<div class="p-6 bg-gray-100 min-h-screen">
+  <h2 class="text-2xl font-bold mb-6">Crear Nuevo Ticket</h2>
+
+  <div class="bg-white p-6 rounded-lg shadow max-w-2xl">
+    <form [formGroup]="createForm" (ngSubmit)="createTicket()" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium">Título *</label>
+        <input formControlName="title" class="w-full p-2 border rounded" placeholder="Ingrese el título del ticket">
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Descripción *</label>
+        <textarea formControlName="description" rows="4" class="w-full p-2 border rounded" placeholder="Describa el ticket..."></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Estado Inicial</label>
+        <select formControlName="status" class="w-full p-2 border rounded">
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Asignado a (opcional)</label>
+        <input formControlName="assignedTo" class="w-full p-2 border rounded" placeholder="Nombre del asignado (dejar vacío para asignarte)">
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Prioridad *</label>
+        <select formControlName="priority" class="w-full p-2 border rounded">
+          <option value="">Seleccionar prioridad</option>
+          <option *ngFor="let p of priorities" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+      <div class="flex space-x-4">
+        <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Crear Ticket</button>
+        <button type="button" (click)="cancel()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -37,10 +37,45 @@ export const routes: Routes = [
         .then(m => m.ProfileComponent)
   },
   {
-    path: 'group',
-    loadComponent: () =>
-      import('./pages/group/group.component')
-        .then(m => m.GroupComponent)
+    path: 'group/:name',
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/group-dashboard/group-dashboard.component')
+            .then(m => m.GroupDashboardComponent)
+      },
+      {
+        path: 'manage',
+        loadComponent: () =>
+          import('./pages/group-management/group-management.component')
+            .then(m => m.GroupManagementComponent)
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./pages/user-management/user-management.component')
+            .then(m => m.UserManagementComponent)
+      },
+      {
+        path: 'reports/:type',
+        loadComponent: () =>
+          import('./pages/reports/reports.component')
+            .then(m => m.ReportsComponent)
+      },
+      {
+        path: 'ticket/:id',
+        loadComponent: () =>
+          import('./pages/ticket-detail/ticket-detail.component')
+            .then(m => m.TicketDetailComponent)
+      },
+      {
+        path: 'create',
+        loadComponent: () =>
+          import('./pages/ticket-create/ticket-create.component')
+            .then(m => m.TicketCreateComponent)
+      }
+    ]
   },
   {
     path: '**',

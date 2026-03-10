@@ -6,19 +6,95 @@
   class="bg-gradient-to-b from-gray-800 to-gray-900 text-white flex flex-col transition-width duration-300 h-full overflow-hidden">
   <div class="flex items-center justify-between p-4">
     <h3 class="flex items-center gap-2 text-lg font-semibold">
-      <i class="pi pi-bars"></i>
       <span *ngIf="sidebarVisible">Menú</span>
     </h3>
     <button
       (click)="toggleSidebar()"
       title="Toggle menu"
       class="p-2 rounded hover:bg-gray-700">
-      <i [ngClass]="sidebarVisible ? 'pi pi-times' : 'pi pi-bars'"></i>
+      <i [ngClass]="sidebarVisible ? 'pi pi-times text-xl' : 'pi pi-bars text-xl'"></i>
     </button>
   </div>
 
   <div class="flex-1 overflow-auto">
     <ul class="space-y-1">
+      <!-- Home -->
+      <li>
+        <a
+          routerLink="/home"
+          routerLinkActive="bg-gray-700 text-white"
+          class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+          <i class="pi pi-home"></i>
+          <span *ngIf="sidebarVisible">Inicio</span>
+        </a>
+      </li>
+      <!-- Profile -->
+      <li>
+        <a
+          routerLink="/profile"
+          routerLinkActive="bg-gray-700 text-white"
+          class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+          <i class="pi pi-user"></i>
+          <span *ngIf="sidebarVisible">Perfil</span>
+        </a>
+      </li>
+
+      <!-- Reports dropdown -->
+      <li>
+        <button
+          (click)="toggleReportsDropdown()"
+          class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded w-full text-left">
+          <i class="pi pi-chart-bar"></i>
+          <span *ngIf="sidebarVisible">Reportes</span>
+          <i *ngIf="sidebarVisible" [ngClass]="reportsDropdownVisible ? 'pi pi-chevron-down ml-auto' : 'pi pi-chevron-right ml-auto'"></i>
+        </button>
+        <div *ngIf="reportsDropdownVisible && sidebarVisible" class="ml-4 mt-1 space-y-1">
+          <a *ngFor="let r of reportLinks"
+             [routerLink]="r.link"
+             routerLinkActive="bg-gray-700 text-white"
+             class="flex items-center gap-2 p-2 text-gray-400 hover:bg-gray-700 hover:text-white rounded text-sm">
+            <i [class]="r.icon"></i>
+            <span>{{ r.label }}</span>
+          </a>
+        </div>
+      </li>
+
+      <!-- User Management (only for super admin) -->
+      <li *ngIf="canManageUsers()">
+        <a
+          [routerLink]="['/group', 'equipo-dev', 'users']"
+          routerLinkActive="bg-gray-700 text-white"
+          class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded w-full text-left">
+          <i class="pi pi-user-shield"></i>
+          <span *ngIf="sidebarVisible">Gestión Usuarios</span>
+        </a>
+      </li>
+
+      <!-- Groups Section -->
+      <li>
+        <button
+          (click)="toggleGroupsDropdown()"
+          class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded w-full text-left">
+          <i class="pi pi-users"></i>
+          <span *ngIf="sidebarVisible">Grupos</span>
+          <i *ngIf="sidebarVisible" [ngClass]="groupsDropdownVisible ? 'pi pi-chevron-down ml-auto' : 'pi pi-chevron-right ml-auto'"></i>
+        </button>
+
+        <!-- Groups Dropdown -->
+        <div *ngIf="groupsDropdownVisible && sidebarVisible" class="ml-4 mt-1 space-y-1">
+          <a
+            *ngFor="let group of groups"
+            [routerLink]="['/group', group.id]"
+            routerLinkActive="bg-gray-700 text-white"
+            class="flex items-center gap-2 p-2 text-gray-400 hover:bg-gray-700 hover:text-white rounded text-sm">
+            <i class="pi pi-circle-fill text-xs" [ngClass]="group.isMember ? 'text-green-400' : 'text-gray-500'"></i>
+            <span class="truncate">{{ group.name }}</span>
+            <span class="text-xs text-gray-500 ml-auto">{{ group.memberCount }}</span>
+          </a>
+        </div>
+      </li>
+
+      <!-- Configuration and logout -->
       <li *ngFor="let item of menu">
         <a
           [routerLink]="item.link"
@@ -26,6 +102,16 @@
           class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded">
           <i [class]="item.icon"></i>
           <span *ngIf="sidebarVisible">{{ item.label }}</span>
+        </a>
+      </li>
+      <li>
+        <a
+          routerLink="/auth/login"
+          class="flex items-center gap-2 p-2 text-red-400 hover:text-red-300 rounded"
+          ngClass="{'text-red-500': sidebarVisible}"             
+          >
+          <i class="pi pi-sign-out" [ngClass]="sidebarVisible ? 'text-red-500' : ''"></i>
+          <span *ngIf="sidebarVisible" class="text-red-500 animate-pulse">Cerrar Sesión</span>
         </a>
       </li>
     </ul>

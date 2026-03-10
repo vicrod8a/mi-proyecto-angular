@@ -1,19 +1,32 @@
-import { Component, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, OnInit, HostListener } from '@angular/core';
+import { RouterOutlet, RouterModule } from '@angular/router';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { PermissionService } from './services/permission.service';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent],
+  imports: [RouterOutlet, SidebarComponent, CommonModule, RouterModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent implements OnInit {
-  constructor(private permService: PermissionService) {}
+  showSidebar: boolean = true;
+  avatarDropdownOpen: boolean = false;
+
+  constructor(private permService: PermissionService, private router: Router) {}
 
   ngOnInit() {
+    // Check initial route
+    this.updateSidebarVisibility();
+
+    // Subscribe to route changes
+    this.router.events.subscribe(() => {
+      this.updateSidebarVisibility();
+    });
+
     // load mock permissions JSON and apply
     this.permService.loadPermissions().subscribe({
       next: (data: any) => {
@@ -32,6 +45,22 @@ export class AppComponent implements OnInit {
         console.error('Failed to load permissions', err);
       }
     });
+  }
+
+  private updateSidebarVisibility() {
+    this.showSidebar = !(this.router.url === '/' || this.router.url.includes('/auth'));
+  }
+
+  toggleAvatarDropdown() {
+    this.avatarDropdownOpen = !this.avatarDropdownOpen;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('#avatarDropdown')) {
+      this.avatarDropdownOpen = false;
+    }
   }
 
   // helper callable from console: app.reloadPerms()

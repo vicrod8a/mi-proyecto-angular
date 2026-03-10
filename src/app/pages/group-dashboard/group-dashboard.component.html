@@ -1,0 +1,61 @@
+<div class="p-6 bg-gray-100 min-h-screen">
+  <h2 class="text-2xl font-bold mb-4">Dashboard de grupo {{ groupName }}</h2>
+
+  <!-- LLM Model Display -->
+  <div class="bg-blue-100 p-4 rounded-lg mb-6">
+    <h3 class="font-semibold text-blue-800">Modelo LLM en uso: {{ llmModel }}</h3>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white shadow rounded p-4">
+      <h3 class="font-semibold">Pendientes</h3>
+      <p>{{ counts()['pendiente'] }}</p>
+    </div>
+    <div class="bg-white shadow rounded p-4">
+      <h3 class="font-semibold">En progreso</h3>
+      <p>{{ counts()['en progreso'] }}</p>
+    </div>
+    <div class="bg-white shadow rounded p-4">
+      <h3 class="font-semibold">Hecho</h3>
+      <p>{{ counts()['hecho'] }}</p>
+    </div>
+    <div class="bg-white shadow rounded p-4">
+      <h3 class="font-semibold">Bloqueados</h3>
+      <p>{{ counts()['bloqueado'] }}</p>
+    </div>
+  </div>
+
+  <div class="mb-6 flex space-x-4">
+    <button
+      (click)="setViewMode('kanban')"
+      [class.bg-blue-500]="viewMode === 'kanban'"
+      [class.bg-gray-300]="viewMode !== 'kanban'"
+      class="px-4 py-2 text-white rounded">
+      Vista Kanban
+    </button>
+    <button
+      (click)="setViewMode('list')"
+      [class.bg-blue-500]="viewMode === 'list'"
+      [class.bg-gray-300]="viewMode !== 'list'"
+      class="px-4 py-2 text-white rounded">
+      Vista Lista
+    </button>
+    <button (click)="createTicket()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+      Crear Ticket
+    </button>
+    <button
+      *ngIf="canManageGroup"
+      (click)="manageGroup()"
+      class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
+      Gestionar Grupo
+    </button>
+  </div>
+
+  <div *ngIf="viewMode === 'kanban'">
+    <app-ticket-kanban></app-ticket-kanban>
+  </div>
+
+  <div *ngIf="viewMode === 'list'">
+    <app-ticket-list></app-ticket-list>
+  </div>
+</div>

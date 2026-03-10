@@ -2,9 +2,6 @@
   <!-- Header -->
   <div class="mb-8">
     <div class="flex items-center justify-between">
-      <button class="p-2 rounded-lg hover:bg-gray-200 transition" (click)="toggleSidebar()" title="Menú">
-        <i class="pi pi-bars text-xl"></i>
-      </button>
       <h1 class="text-3xl font-bold flex items-center gap-3">
         <i class="pi pi-home"></i>
         Panel de Control
@@ -12,6 +9,14 @@
       <div></div>
     </div>
     <p class="text-gray-600 mt-2">Bienvenido a tu panel principal</p>
+    <div class="mt-6">
+      <h2 class="text-xl font-semibold mb-2">Mis Grupos</h2>
+      <ul class="flex gap-3">
+        <li *ngFor="let g of groups" class="cursor-pointer px-3 py-1 bg-blue-100 rounded" (click)="openGroup(g)">
+          {{ g }}
+        </li>
+      </ul>
+    </div>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -22,6 +27,9 @@
         Resumen
       </h3>
       <p class="text-gray-600 mb-4">Esta es tu área de panel principal. Puedes agregar gráficos, estadísticas y otros componentes aquí.</p>
+      <div class="h-32 mb-4">
+        <p-chart type="line" [data]="smallChartData" [options]="smallChartOptions"></p-chart>
+      </div>
       <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
         <i class="pi pi-eye"></i>
         Ver Detalles

@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
+
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
-import { CheckboxModule } from 'primeng/checkbox';
 import { MessageService } from 'primeng/api';
 import { CommonModule } from '@angular/common';
 
@@ -19,8 +19,7 @@ import { CommonModule } from '@angular/common';
     InputTextModule,
     PasswordModule,
     ButtonModule,
-    ToastModule,
-    CheckboxModule
+    ToastModule
   ],
   providers: [MessageService],
   templateUrl: './login.component.html',
@@ -30,6 +29,9 @@ export class LoginComponent {
 
   loginForm: FormGroup;
   loading = false;
+
+  // nombre de la aplicación para el logo
+  appName = 'Mi App';
 
   // 🔐 Credenciales hardcodeadas
   private readonly HARDCODED_EMAIL = 'admin@test.com';
@@ -42,8 +44,7 @@ export class LoginComponent {
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required],
-      rememberMe: [false]
+      password: ['', Validators.required]
     });
   }
 
@@ -70,10 +71,10 @@ export class LoginComponent {
           detail: 'Bienvenido al sistema'
         });
 
-        // Opcional: redirigir
+        // Navegar directamente al grupo por defecto
         setTimeout(() => {
-          this.router.navigate(['/home']);
-        }, 1000);
+          this.router.navigate(['/group', 'Equipo Dev']);
+        }, 500);
 
       } else {
         this.messageService.add({

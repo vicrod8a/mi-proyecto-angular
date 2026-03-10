@@ -150,3 +150,20 @@
 ::ng-deep .p-dialog-mask.p-component-overlay {
   z-index: 1000;
 }
+/* explicit mask opacity for dialogs, in case another rule removes it */
+::ng-deep .p-dialog-mask,
+::ng-deep .p-dialog-mask.p-component-overlay {
+  background-color: rgba(0,0,0,0.6) !important;
+  z-index: 99998 !important;
+}
+
+/* additional custom dialog overrides */
+::ng-deep .p-dialog.custom-dialog {
+  background-color: #ffffff !important;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25) !important;
+  z-index: 99999 !important; /* ensure above toasts */
+}
+::ng-deep .p-dialog.custom-dialog .p-dialog-header {
+  background: linear-gradient(to right, #2563eb, #7c3aed) !important;
+  color: white !important;
+}

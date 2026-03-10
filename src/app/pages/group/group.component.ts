@@ -49,12 +49,12 @@ export class GroupComponent implements OnInit {
     private permissionService: PermissionService
   ) {
     this.groupForm = this.fb.group({
-      nivel: ['', Validators.required],
-      autor: ['', Validators.required],
-      nombre: ['', Validators.required],
-      integrantes: ['', Validators.required],
+      level: ['', Validators.required],
+      author: ['', Validators.required],
+      name: ['', Validators.required],
+      members: ['', Validators.required],
       tickets: ['', [Validators.required, Validators.min(0)]],
-      descripcion: ['', Validators.required]
+      description: ['', Validators.required]
     });
   }
 
@@ -85,12 +85,12 @@ export class GroupComponent implements OnInit {
     this.isEditing = true;
     this.selectedGroup = group;
     this.groupForm.patchValue({
-      nivel: group.nivel,
-      autor: group.autor,
-      nombre: group.nombre,
-      integrantes: group.integrantes,
+      level: group.level,
+      author: group.author,
+      name: group.name,
+      members: group.members,
       tickets: group.tickets,
-      descripcion: group.descripcion
+      description: group.description
     });
     this.showDialog = true;
   }
@@ -105,19 +105,18 @@ export class GroupComponent implements OnInit {
       return;
     }
 
+    // Since groups are now static, just show a message
     if (this.isEditing && this.selectedGroup) {
-      this.groupService.updateGroup(this.selectedGroup.id, this.groupForm.value);
       this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Grupo actualizado correctamente'
+        severity: 'info',
+        summary: 'Información',
+        detail: 'Los grupos son administrados por el sistema. Los cambios no se pueden guardar.'
       });
     } else {
-      this.groupService.addGroup(this.groupForm.value);
       this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Grupo creado correctamente'
+        severity: 'info',
+        summary: 'Información',
+        detail: 'Los grupos son administrados por el sistema. No se pueden crear nuevos grupos.'
       });
     }
 
@@ -127,15 +126,14 @@ export class GroupComponent implements OnInit {
 
   deleteGroup(group: Group) {
     this.confirmationService.confirm({
-      message: '¿Estás seguro de que deseas eliminar este grupo?',
-      header: 'Confirmar eliminación',
-      icon: 'pi pi-exclamation-triangle',
+      message: 'Los grupos son administrados por el sistema y no se pueden eliminar.',
+      header: 'Información',
+      icon: 'pi pi-info-circle',
       accept: () => {
-        this.groupService.deleteGroup(group.id);
         this.messageService.add({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Grupo eliminado correctamente'
+          severity: 'info',
+          summary: 'Información',
+          detail: 'Los grupos son administrados por el sistema.'
         });
       }
     });

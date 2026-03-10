@@ -10,6 +10,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { SidebarService } from '../../services/sidebar.service';
 import { ProfileService, UserProfile } from '../../services/profile.service';
+import { TicketService } from '../../services/ticket.service';
+import { Ticket } from '../../models/ticket.model';
 
 @Component({
   selector: 'app-profile',
@@ -31,10 +33,18 @@ export class ProfileComponent implements OnInit {
   isEditing = false;
   user: UserProfile;
   editingUser: UserProfile;
+  assignedTickets: Ticket[] = [];
+  ticketSummary = {
+    pendiente: 0,
+    'en progreso': 0,
+    revisión: 0,
+    hecho: 0
+  };
 
   constructor(
     public sidebarService: SidebarService,
     private profileService: ProfileService,
+    private ticketService: TicketService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
     private router: Router
@@ -46,7 +56,35 @@ export class ProfileComponent implements OnInit {
   ngOnInit() {
     this.profileService.user$.subscribe(user => {
       this.user = user;
+      this.loadAssignedTickets();
     });
+    this.loadAssignedTickets();
+  }
+
+  loadAssignedTickets() {
+    this.ticketService.getTickets().subscribe(tickets => {
+      this.assignedTickets = tickets.filter(ticket => ticket.assignedTo === this.user.firstName);
+      this.updateTicketSummary();
+    });
+  }
+
+  updateTicketSummary() {
+    this.ticketSummary = {
+      pendiente: 0,
+      'en progreso': 0,
+      revisión: 0,
+      hecho: 0
+    };
+    this.assignedTickets.forEach(ticket => {
+      const status = ticket.status.toLowerCase();
+      if (status in this.ticketSummary) {
+        this.ticketSummary[status as keyof typeof this.ticketSummary]++;
+      }
+    });
+  }
+
+  openTicketDetail(ticket: Ticket) {
+    this.router.navigate(['/group', 'test-group', 'ticket', ticket.id]);
   }
 
   toggleSidebar() {

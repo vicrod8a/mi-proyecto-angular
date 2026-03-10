@@ -1,6 +1,57 @@
 <div class="flex h-screen">
-  <app-sidebar></app-sidebar>
-  <div class="flex-1 overflow-auto">
-    <router-outlet></router-outlet>
+  <app-sidebar *ngIf="showSidebar"></app-sidebar>
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Header with Avatar -->
+    <header *ngIf="showSidebar" class="bg-white shadow-sm border-b px-6 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-4">
+        <h1 class="text-xl font-semibold text-gray-800">Mi Proyecto</h1>
+      </div>
+      <div class="flex items-center space-x-4">
+        <!-- Avatar Dropdown -->
+        <div class="relative" id="avatarDropdown">
+          <button
+            (click)="toggleAvatarDropdown()"
+            class="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition">
+            <img
+              src="https://via.placeholder.com/32"
+              alt="Avatar"
+              class="w-8 h-8 rounded-full">
+            <span class="text-sm font-medium text-gray-700">Juan</span>
+            <i class="pi pi-chevron-down text-gray-500"></i>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div
+            *ngIf="avatarDropdownOpen"
+            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border">
+            <div class="py-1">
+              <a
+                [routerLink]="'/profile'"
+                class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <i class="pi pi-user mr-2"></i>
+                Mi Perfil
+              </a>
+              <a
+                [routerLink]="'/settings'"
+                class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <i class="pi pi-cog mr-2"></i>
+                Configuración
+              </a>
+              <div class="border-t border-gray-100"></div>
+              <a
+                [routerLink]="'/auth/login'"
+                class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                <i class="pi pi-sign-out mr-2"></i>
+                Cerrar Sesión
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-auto">
+      <router-outlet></router-outlet>
+    </div>
   </div>
 </div>

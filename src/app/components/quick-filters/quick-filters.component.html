@@ -1,0 +1,30 @@
+<div class="flex flex-wrap gap-2 mb-4">
+  <button
+    (click)="setFilter('all')"
+    [class.bg-blue-500]="activeFilter === 'all'"
+    [class.bg-gray-300]="activeFilter !== 'all'"
+    class="px-3 py-1 text-sm text-white rounded hover:bg-blue-600 transition">
+    Todos
+  </button>
+  <button
+    (click)="setFilter('my-tickets')"
+    [class.bg-blue-500]="activeFilter === 'my-tickets'"
+    [class.bg-gray-300]="activeFilter !== 'my-tickets'"
+    class="px-3 py-1 text-sm text-white rounded hover:bg-blue-600 transition">
+    Mis Tickets
+  </button>
+  <button
+    (click)="setFilter('unassigned')"
+    [class.bg-blue-500]="activeFilter === 'unassigned'"
+    [class.bg-gray-300]="activeFilter !== 'unassigned'"
+    class="px-3 py-1 text-sm text-white rounded hover:bg-blue-600 transition">
+    Sin Asignar
+  </button>
+  <button
+    (click)="setFilter('high-priority')"
+    [class.bg-blue-500]="activeFilter === 'high-priority'"
+    [class.bg-gray-300]="activeFilter !== 'high-priority'"
+    class="px-3 py-1 text-sm text-white rounded hover:bg-blue-600 transition">
+    Prioridad 1
+  </button>
+</div>

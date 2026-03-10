@@ -1,0 +1,88 @@
+<div class="p-6 bg-gray-100 min-h-screen" *ngIf="ticket">
+  <button (click)="goBack()" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">← Volver</button>
+
+  <div class="bg-white p-6 rounded-lg shadow">
+    <h2 class="text-2xl font-bold mb-4" *ngIf="!isEditing">{{ ticket.title }}</h2>
+
+    <form [formGroup]="editForm" *ngIf="isEditing && canEdit" (ngSubmit)="saveChanges()" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium">Título</label>
+        <input formControlName="title" class="w-full p-2 border rounded">
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Descripción</label>
+        <textarea formControlName="description" rows="4" class="w-full p-2 border rounded"></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Estado</label>
+        <select formControlName="status" class="w-full p-2 border rounded">
+          <option value="Pendiente">Pendiente</option>
+          <option value="En progreso">En progreso</option>
+          <option value="Revisión">Revisión</option>
+          <option value="Hecho">Hecho</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Asignado a</label>
+        <input formControlName="assignedTo" class="w-full p-2 border rounded">
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Prioridad</label>
+        <select formControlName="priority" class="w-full p-2 border rounded">
+          <option *ngFor="let p of priorities" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Fecha límite</label>
+        <input formControlName="deadline" type="date" class="w-full p-2 border rounded">
+      </div>
+      <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Guardar</button>
+      <button type="button" (click)="toggleEdit()" class="ml-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancelar</button>
+    </form>
+
+    <div *ngIf="!isEditing">
+      <p><strong>Descripción:</strong> {{ ticket.description }}</p>
+      <p><strong>Estado:</strong> {{ ticket.status }}</p>
+      <p><strong>Asignado a:</strong> {{ ticket.assignedTo }}</p>
+      <p><strong>Prioridad:</strong> {{ ticket.priority }}</p>
+      <p><strong>Fecha de creación:</strong> {{ ticket.createdDate | date:'medium' }}</p>
+      <p><strong>Fecha límite:</strong> {{ ticket.deadline | date:'medium' }}</p>
+      <p><strong>Creador:</strong> {{ ticket.creator }}</p>
+
+      <div *ngIf="canEdit" class="mt-4">
+        <button (click)="toggleEdit()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Editar</button>
+      </div>
+
+      <div *ngIf="canChangeStatus" class="mt-4">
+        <label class="block text-sm font-medium">Cambiar Estado</label>
+        <select (change)="changeStatus($any($event.target).value)" class="p-2 border rounded">
+          <option value="Pendiente" [selected]="ticket.status === 'Pendiente'">Pendiente</option>
+          <option value="En progreso" [selected]="ticket.status === 'En progreso'">En progreso</option>
+          <option value="Revisión" [selected]="ticket.status === 'Revisión'">Revisión</option>
+          <option value="Hecho" [selected]="ticket.status === 'Hecho'">Hecho</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <h3 class="text-lg font-semibold mb-2">Comentarios</h3>
+      <div *ngFor="let comment of ticket.comments" class="bg-gray-50 p-3 rounded mb-2">
+        <p><strong>{{ comment.user }}</strong> - {{ comment.date | date:'short' }}</p>
+        <p>{{ comment.text }}</p>
+      </div>
+
+      <form [formGroup]="commentForm" (ngSubmit)="addComment()" class="mt-4">
+        <textarea formControlName="text" placeholder="Agregar comentario..." rows="3" class="w-full p-2 border rounded"></textarea>
+        <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Agregar Comentario</button>
+      </form>
+    </div>
+
+    <div class="mt-6">
+      <h3 class="text-lg font-semibold mb-2">Historial</h3>
+      <div *ngFor="let entry of ticket.history" class="bg-gray-50 p-3 rounded mb-2">
+        <p><strong>{{ entry.user }}</strong> - {{ entry.date | date:'short' }}</p>
+        <p>{{ entry.action }}</p>
+      </div>
+    </div>
+  </div>
+</div>

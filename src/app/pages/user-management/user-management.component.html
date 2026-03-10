@@ -1,0 +1,380 @@
+<div class="user-management-container fade-in">
+  <!-- Header Section -->
+  <div class="user-management-header">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h1 class="user-management-title">Gestión de Usuarios</h1>
+        <p class="user-management-subtitle">Administra usuarios, roles y permisos del sistema</p>
+      </div>
+      <button
+        pButton
+        label="Nuevo Usuario"
+        icon="pi pi-plus"
+        class="p-button-primary p-button-lg bg-gradient-to-r from-blue-600 to-indigo-600 border-0 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
+        style="font-weight:600;"
+        (click)="openNewUserDialog()"
+        *ngIf="canManageUsers()">
+      </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <i class="pi pi-users"></i>
+        </div>
+        <div class="stat-card-title">{{ totalUsers }}</div>
+        <div class="stat-card-subtitle">Usuarios Totales</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <i class="pi pi-user-check"></i>
+        </div>
+        <div class="stat-card-title flex items-center justify-center gap-2">
+          <i class="pi pi-check text-green-600"></i>
+          {{ activeUsers }}
+        </div>
+        <div class="stat-card-subtitle">Usuarios Activos</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <i class="pi pi-shield"></i>
+        </div>
+        <div class="stat-card-title">{{ adminUsers }}</div>
+        <div class="stat-card-subtitle">Administradores</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-container">
+    <div class="table-header">
+      <h3>Lista de Usuarios</h3>
+      <p>Gestiona todos los usuarios del sistema y sus permisos</p>
+    </div>
+
+    <p-table
+      [value]="users"
+      [paginator]="true"
+      [rows]="10"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} usuarios"
+      [rowsPerPageOptions]="[5, 10, 25]"
+      styleClass="custom-table p-datatable-striped">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th class="text-left">Usuario</th>
+          <th class="text-left">Email</th>
+          <th class="text-left">Rol</th>
+          <th class="text-left">Grupos</th>
+          <th class="text-center"><i class="pi pi-user-check"></i> Estado</th>
+          <th class="text-left">Último Acceso</th>
+          <th class="text-center">Permisos</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-user>
+        <tr class="hover:shadow-md transition-shadow duration-200">
+          <td>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
+                {{ user.firstName.charAt(0) }}{{ user.lastName.charAt(0) }}
+              </div>
+              <div>
+                <div class="font-medium text-gray-900">{{ user.firstName }} {{ user.lastName }}</div>
+                <div class="text-sm text-gray-500">@{{ user.username }}</div>
+                <div *ngIf="isSuperAdmin(user)" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">
+                  <i class="pi pi-star mr-1"></i>
+                  Super Admin
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="text-gray-700">{{ user.email }}</td>
+          <td>
+            <span [ngClass]="{
+              'role-badge-admin': user.role === 'Super Administrator',
+              'role-badge-manager': user.role === 'Project Manager',
+              'role-badge-developer': user.role === 'Developer',
+              'role-badge-qa': user.role === 'QA Engineer'
+            }">
+              {{ user.role }}
+            </span>
+          </td>
+          <td>
+            <div class="flex flex-wrap gap-1">
+              <span *ngFor="let group of user.groups" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                {{ getGroupNames([group]) }}
+              </span>
+            </div>
+          </td>
+          <td class="text-center">
+            <span [ngClass]="user.isActive ? 'status-badge-active' : 'status-badge-inactive'">
+              <i [class]="user.isActive ? 'pi pi-check-circle' : 'pi pi-times-circle'" class="mr-1"></i>
+              {{ user.isActive ? 'Activo' : 'Inactivo' }}
+            </span>
+          </td>
+          <td class="text-gray-600">{{ user.lastLogin || 'Nunca' }}</td>
+          <td class="text-center">
+            <div class="flex items-center justify-center gap-2">
+              <span class="text-sm font-medium text-gray-900">{{ user.permissions.length }}</span>
+              <span class="text-xs text-gray-500">permisos</span>
+              <button
+                pButton
+                type="button"
+                icon="pi pi-eye"
+                class="btn-permissions p-button-sm"
+                (click)="openPermissionsDialog(user)"
+                title="Ver permisos">
+              </button>
+            </div>
+          </td>
+          <td class="text-center">
+            <div class="action-buttons" *ngIf="canManageUsers() && !isSuperAdmin(user)">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-pencil"
+                class="btn-edit p-button-sm"
+                (click)="openEditUserDialog(user)"
+                title="Editar">
+              </button>
+              <button
+                pButton
+                type="button"
+                icon="pi pi-trash"
+                class="btn-delete p-button-sm"
+                (click)="deleteUser(user)"
+                title="Eliminar">
+              </button>
+            </div>
+            <span *ngIf="isSuperAdmin(user)" class="text-sm text-gray-500 italic">Super Admin</span>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="text-center py-8">
+            <div class="empty-state">
+              <i class="pi pi-users empty-state-icon"></i>
+              <h3 class="empty-state-title">No hay usuarios</h3>
+              <p class="empty-state-message">Aún no se han registrado usuarios en el sistema.</p>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
+
+<!-- manual backdrop for dialogs -->
+<div *ngIf="showUserDialog || showPermissionsDialog" class="fixed inset-0 bg-black bg-opacity-50 z-9000"></div>
+
+<!-- User Dialog -->
+<p-dialog
+  [(visible)]="showUserDialog"
+  [modal]="true"
+  [appendTo]="'body'" [baseZIndex]="10000"
+  [style]="{width: '700px', 'background-color': 'white'}"
+  [header]="isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario'"
+  [closable]="true"
+  styleClass="custom-dialog"
+  [appendTo]="'body'"
+  [baseZIndex]="10000"
+  (onHide)="closeUserDialog()">
+
+  <div class="p-6">
+    <form [formGroup]="userForm" (ngSubmit)="saveUser()">
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label">Nombre de Usuario *</label>
+          <input
+            pInputText
+            formControlName="username"
+            class="form-input"
+            placeholder="Ingrese nombre de usuario">
+          <small class="form-error" *ngIf="userForm.get('username')?.invalid && userForm.get('username')?.touched">
+            Nombre de usuario requerido (mínimo 3 caracteres)
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Email *</label>
+          <input
+            pInputText
+            type="email"
+            formControlName="email"
+            class="form-input"
+            placeholder="usuario@empresa.com">
+          <small class="form-error" *ngIf="userForm.get('email')?.invalid && userForm.get('email')?.touched">
+            Email válido requerido
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Nombre *</label>
+          <input
+            pInputText
+            formControlName="firstName"
+            class="form-input"
+            placeholder="Nombre">
+          <small class="form-error" *ngIf="userForm.get('firstName')?.invalid && userForm.get('firstName')?.touched">
+            Nombre requerido
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Apellido *</label>
+          <input
+            pInputText
+            formControlName="lastName"
+            class="form-input"
+            placeholder="Apellido">
+          <small class="form-error" *ngIf="userForm.get('lastName')?.invalid && userForm.get('lastName')?.touched">
+            Apellido requerido
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Rol *</label>
+          <select
+            formControlName="role"
+            class="form-select">
+            <option value="">Seleccione un rol</option>
+            <option value="Super Administrator">Super Administrator</option>
+            <option value="Project Manager">Project Manager</option>
+            <option value="Developer">Developer</option>
+            <option value="QA Engineer">QA Engineer</option>
+          </select>
+          <small class="form-error" *ngIf="userForm.get('role')?.invalid && userForm.get('role')?.touched">
+            Rol requerido
+          </small>
+        </div>
+
+        <div class="form-field col-span-2">
+          <label class="form-label">Grupos</label>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-lg">
+            <div *ngFor="let group of availableGroups" class="flex items-center">
+              <input
+                type="checkbox"
+                [id]="group.value"
+                [checked]="isGroupSelected(group.value)"
+                (change)="toggleGroupSelection(group.value)"
+                class="permission-checkbox mr-3">
+              <label [for]="group.value" class="text-sm font-medium text-gray-700 cursor-pointer">
+                {{ group.label }}
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-field col-span-2">
+          <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+            <input
+              type="checkbox"
+              formControlName="isActive"
+              class="permission-checkbox mr-3">
+            <label class="text-sm font-medium text-gray-700 cursor-pointer">
+              Usuario activo
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+        <p-button
+          type="button"
+          label="Cancelar"
+          icon="pi pi-times"
+          class="p-button-text p-button-lg"
+          (click)="closeUserDialog()">
+        </p-button>
+        <p-button
+          type="submit"
+          [label]="isEditing ? 'Actualizar Usuario' : 'Crear Usuario'"
+          icon="pi pi-check"
+          class="p-button-primary p-button-lg bg-gradient-to-r from-blue-600 to-indigo-600 border-0"
+          [disabled]="userForm.invalid">
+        </p-button>
+      </div>
+    </form>
+  </div>
+</p-dialog>
+
+<!-- Permissions Dialog -->
+<p-dialog
+  [(visible)]="showPermissionsDialog"
+  [modal]="true"
+  [appendTo]="'body'" [baseZIndex]="10000"
+  [style]="{width: '900px', 'background-color': 'white'}"
+  header="Gestionar Permisos"
+  [closable]="true"
+  styleClass="custom-dialog"
+  [appendTo]="'body'"
+  [baseZIndex]="10000"
+  (onHide)="closePermissionsDialog()">
+
+  <div class="p-6">
+    <div *ngIf="selectedUser" class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+      <h3 class="text-lg font-semibold text-blue-900 mb-1">
+        Gestionando permisos de {{ selectedUser.firstName }} {{ selectedUser.lastName }}
+      </h3>
+      <p class="text-blue-700 text-sm">Seleccione los permisos que desea asignar a este usuario</p>
+    </div>
+
+    <div class="permissions-container custom-scrollbar">
+      <div class="permissions-grid">
+        <div *ngFor="let category of objectKeys(permissionsByCategory)" class="permission-category">
+          <h4 class="permission-category-title text-blue-600">
+            <i class="pi pi-folder mr-2"></i>
+            {{ category }}
+          </h4>
+          <div class="permission-list">
+            <div *ngFor="let permission of permissionsByCategory[category]" class="permission-item">
+              <input
+                type="checkbox"
+                [id]="permission.id"
+                [checked]="selectedPermissions.includes(permission.id)"
+                (change)="togglePermission(permission.id)"
+                class="permission-checkbox">
+              <div class="permission-content">
+                <div class="permission-name">{{ permission.name }}</div>
+                <div class="permission-description">{{ permission.description }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+      <div class="text-sm text-gray-600">
+        <strong>{{ selectedPermissions.length }}</strong> permisos seleccionados
+      </div>
+      <div class="flex gap-3">
+        <p-button
+          type="button"
+          label="Cancelar"
+          icon="pi pi-times"
+          class="p-button-text p-button-lg"
+          (click)="closePermissionsDialog()">
+        </p-button>
+        <p-button
+          type="button"
+          label="Guardar Permisos"
+          icon="pi pi-check"
+          class="p-button-primary p-button-lg bg-gradient-to-r from-green-600 to-emerald-600 border-0"
+          (click)="savePermissions()">
+        </p-button>
+      </div>
+    </div>
+  </div>
+</p-dialog>
+
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>

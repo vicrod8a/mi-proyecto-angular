@@ -1,28 +1,25 @@
 {
+  "tickets": [
+    "ticket.create",
+    "ticket.read",
+    "ticket.update",
+    "ticket.delete"
+  ],
   "groups": [
-    "groups_view",
-    "group_view",
-    "groups_edit",
-    "groups_delete",
-    "group_delete",
-    "groups_add",
-    "group_add"
+    "group.create",
+    "group.read",
+    "group.update",
+    "group.delete"
   ],
   "users": [
-    "users_view",
-    "user_view",
-    "users_edit",
-    "user_edit",
-    "user_delete",
-    "user_add"
+    "user.create",
+    "user.read",
+    "user.update",
+    "user.delete",
+    "permission.manage"
   ],
-  "tickets": [
-    "tickets_view",
-    "ticket_view",
-    "tickets_edit",
-    "ticket_edit",
-    "ticket_delete",
-    "ticket_add",
-    "tickets_add"
+  "system": [
+    "system.admin",
+    "reports.view"
   ]
 }
