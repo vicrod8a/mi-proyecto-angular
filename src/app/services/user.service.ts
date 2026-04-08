@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import UserApiClient from './user.api.client';
 
 export interface User {
   id: string;
@@ -13,6 +14,11 @@ export interface User {
   createdDate: string;
   lastLogin?: string;
   groups: string[]; // IDs de grupos a los que pertenece
+  password: string; // Added password field
+  phone?: string;
+  address?: string;
+  birthDate?: string;
+  avatar?: string;
 }
 
 export interface Permission {
@@ -26,15 +32,59 @@ export interface Permission {
   providedIn: 'root'
 })
 export class UserService {
-  private usersSubject = new BehaviorSubject<User[]>(this.getInitialUsers());
+  private readonly STORAGE_KEY = 'mi-proyecto-users';
+  private readonly CURRENT_USER_KEY = 'mi-proyecto-current-user';
+  private readonly TOKEN_KEY = 'mi-proyecto-token';
+  private api = new UserApiClient();
+  private usersSubject = new BehaviorSubject<User[]>(this.loadUsersFromStorage());
   public users$ = this.usersSubject.asObservable();
 
   private permissionsSubject = new BehaviorSubject<Permission[]>(this.getAllPermissions());
   public permissions$ = this.permissionsSubject.asObservable();
 
-  constructor() { }
+  private currentUserId: string = this.loadCurrentUserIdFromStorage() || '1';
 
-  private getInitialUsers(): User[] {
+  constructor() {}
+
+  private loadUsersFromStorage(): User[] {
+    const stored = localStorage.getItem(this.STORAGE_KEY);
+    if (stored) {
+      try {
+        const users = JSON.parse(stored);
+        console.log('[UserService] Loaded users from localStorage:', users);
+        return users;
+      } catch (e) {
+        console.warn('[UserService] Error parsing stored users:', e);
+      }
+    }
+    // Return default users if nothing in storage
+    return this.getDefaultUsers();
+  }
+
+  private loadCurrentUserIdFromStorage(): string | null {
+    const stored = localStorage.getItem(this.CURRENT_USER_KEY);
+    return stored || null;
+  }
+
+  private saveUsersToStorage(users: User[]): void {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(users));
+      console.log('[UserService] Saved users to localStorage');
+    } catch (e) {
+      console.warn('[UserService] Error saving users to localStorage:', e);
+    }
+  }
+
+  private saveCurrentUserIdToStorage(userId: string): void {
+    try {
+      localStorage.setItem(this.CURRENT_USER_KEY, userId);
+      console.log('[UserService] Saved current user ID to localStorage:', userId);
+    } catch (e) {
+      console.warn('[UserService] Error saving current user ID to localStorage:', e);
+    }
+  }
+
+  private getDefaultUsers(): User[] {
     return [
       {
         id: '1',
@@ -47,7 +97,12 @@ export class UserService {
         isActive: true,
         createdDate: '2024-01-01',
         lastLogin: '2024-12-09',
-        groups: ['equipo-dev', 'soporte']
+        groups: ['equipo-dev', 'soporte'],
+        password: 'SuperAdmin@123',
+        phone: '+34 912 345 678',
+        address: 'Calle Principal 123, Madrid, España',
+        birthDate: '1985-05-15',
+        avatar: 'https://i.pravatar.cc/150?img=1'
       },
       {
         id: '2',
@@ -56,11 +111,16 @@ export class UserService {
         firstName: 'Juan',
         lastName: 'Pérez',
         role: 'Developer',
-        permissions: ['ticket.create', 'ticket.read', 'ticket.update', 'group.read'],
+        permissions: ['ticket.create', 'ticket.read', 'ticket.update', 'group.read', 'group.create'],
         isActive: true,
         createdDate: '2024-01-15',
         lastLogin: '2024-12-08',
-        groups: ['equipo-dev']
+        groups: ['equipo-dev'],
+        password: 'Juan@123',
+        phone: '+34 678 901 234',
+        address: 'Avenida Secundaria 45, Barcelona, España',
+        birthDate: '1990-08-22',
+        avatar: 'https://i.pravatar.cc/150?img=2'
       },
       {
         id: '3',
@@ -73,7 +133,12 @@ export class UserService {
         isActive: true,
         createdDate: '2024-02-01',
         lastLogin: '2024-12-09',
-        groups: ['equipo-dev', 'soporte']
+        groups: ['equipo-dev', 'soporte'],
+        password: 'Maria@123',
+        phone: '+34 645 789 012',
+        address: 'Plaza Mayor 78, Valencia, España',
+        birthDate: '1988-03-10',
+        avatar: 'https://i.pravatar.cc/150?img=3'
       },
       {
         id: '4',
@@ -86,12 +151,33 @@ export class UserService {
         isActive: false,
         createdDate: '2024-03-01',
         lastLogin: '2024-11-15',
-        groups: ['qa']
+        groups: ['qa'],
+        password: 'Carlos@123',
+        phone: '+34 612 345 678',
+        address: 'Calle Secundaria 567, Sevilla, España',
+        birthDate: '1992-11-30',
+        avatar: 'https://i.pravatar.cc/150?img=4'
+      },
+      {
+        id: '5',
+        username: 'analopeaz',
+        email: 'ana.lopez@company.com',
+        firstName: 'Ana',
+        lastName: 'López',
+        role: 'UX Designer',
+        permissions: ['ticket.create', 'ticket.read', 'ticket.update', 'group.read'],
+        isActive: true,
+        createdDate: '2024-02-10',
+        lastLogin: '2024-12-09',
+        groups: ['ux', 'equipo-dev'],
+        password: 'Ana@123',
+        phone: '+34 633 456 789',
+        address: 'Calle del Diseño 456, Madrid, España',
+        birthDate: '1993-07-17',
+        avatar: 'https://i.pravatar.cc/150?img=5'
       }
     ];
-  }
-
-  private getAllPermissions(): Permission[] {
+  }  private getAllPermissions(): Permission[] {
     return [
       // Ticket permissions
       { id: 'ticket.create', name: 'Crear Tickets', description: 'Permite crear nuevos tickets', category: 'Tickets' },
@@ -104,6 +190,7 @@ export class UserService {
       { id: 'group.read', name: 'Ver Grupos', description: 'Permite ver grupos existentes', category: 'Grupos' },
       { id: 'group.update', name: 'Editar Grupos', description: 'Permite editar grupos existentes', category: 'Grupos' },
       { id: 'group.delete', name: 'Eliminar Grupos', description: 'Permite eliminar grupos', category: 'Grupos' },
+      { id: 'group.manage', name: 'Gestionar Grupos', description: 'Permite acceder al panel de gestión de grupos', category: 'Grupos' },
 
       // User permissions
       { id: 'user.create', name: 'Crear Usuarios', description: 'Permite crear nuevos usuarios', category: 'Usuarios' },
@@ -116,7 +203,7 @@ export class UserService {
 
       // System permissions
       { id: 'system.admin', name: 'Administrador del Sistema', description: 'Acceso completo al sistema', category: 'Sistema' },
-      { id: 'reports.view', name: 'Ver Reportes', description: 'Permite acceder a reportes del sistema', category: 'Reportes' }
+      { id: 'report.read', name: 'Ver Reportes', description: 'Permite acceder a reportes del sistema', category: 'Reportes' }
     ];
   }
 
@@ -128,14 +215,130 @@ export class UserService {
     return this.permissions$;
   }
 
-  getUserById(id: string): User | undefined {
-    return this.usersSubject.value.find(user => user.id === id);
+  getUserById(id: string): User | null {
+    return this.usersSubject.value.find(user => user.id === id) || null;
   }
 
   getCurrentUser(): User | null {
     // In a real app, this would come from authentication service
-    // For now, return superAdmin as current user
-    return this.getUserById('1') || null;
+    return this.getUserById(this.currentUserId) || null;
+  }
+
+  async login(email: string, password: string): Promise<any> {
+    console.log('Intentando login con user-service y Supabase fallback:', { email });
+    // Primero intentar el microservicio (auth endpoint)
+    try {
+      const resp = await this.api.login(email, password);
+      const envelope = resp && resp.data ? resp.data : resp;
+      const token = envelope?.token;
+      const userPayload = envelope?.usuario || envelope?.user || envelope;
+      if (token) {
+        try { localStorage.setItem(this.TOKEN_KEY, token); } catch {}
+      }
+      if (userPayload && userPayload.id) {
+        const userId = String(userPayload.id);
+        this.setCurrentUser(userId);
+        // merge into local users list
+        const others = this.usersSubject.value.filter(u => u.id !== userId);
+        const normalized: User = {
+          id: userId,
+          username: userPayload.name || userPayload.username || userPayload.email || '',
+          email: userPayload.email || '',
+          firstName: userPayload.firstName || userPayload.nombre_completo || '',
+          lastName: userPayload.lastName || '',
+          role: userPayload.role || userPayload.rol || '',
+          permissions: userPayload.permissions || [],
+          isActive: true,
+          createdDate: new Date().toISOString().split('T')[0],
+          lastLogin: undefined,
+          groups: userPayload.groupIds || [],
+          password: '',
+          phone: userPayload.phone || undefined,
+          address: userPayload.address || undefined,
+          birthDate: userPayload.birthdate || undefined,
+          avatar: userPayload.avatar || undefined,
+        };
+        const updated = [...others, normalized];
+        this.saveUsersToStorage(updated);
+        this.usersSubject.next(updated);
+        // After successful login, sync full users list from API
+        try { await this.syncUsers(); } catch (e) { /* ignore sync errors */ }
+        return { success: true, user: normalized, token };
+      }
+    } catch (e: any) {
+      console.warn('[UserService] API login failed, falling back to Supabase', e?.message || e);
+    }
+
+    // No fallback to direct Supabase from frontend for security reasons
+    return { success: false, message: 'Login falló: autenticación por API no disponible' };
+  }
+
+  async register(payload: { username: string; email: string; password: string; fullName?: string; address?: string; phone?: string; birthdate?: string; }) {
+    try {
+      const full = payload.fullName || '';
+      const [firstName, ...rest] = full.trim().split(/\s+/);
+      const lastName = rest.join(' ');
+      const resp = await this.api.register({
+        username: payload.username,
+        email: payload.email,
+        password: payload.password,
+        first_name: firstName || '',
+        last_name: lastName || '',
+      });
+      const envelope = resp && resp.data ? resp.data : resp;
+      // If registration returned id, treat as success
+      if (envelope && (envelope.id || envelope.message)) {
+        return { success: true, data: envelope };
+      }
+      return { success: false, message: 'Registro fallido' };
+    } catch (e: any) {
+      return { success: false, message: e?.message || String(e) };
+    }
+  }
+
+  logout(): void {
+    // Remove token and current user
+    try { localStorage.removeItem(this.TOKEN_KEY); } catch {}
+    this.currentUserId = '';
+    localStorage.removeItem(this.CURRENT_USER_KEY);
+  }
+
+  async syncUsers(): Promise<void> {
+    const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+    try {
+      const resp = await this.api.getUsers(token);
+      const envelope = resp && resp.data ? resp.data : resp;
+      const usersData = Array.isArray(envelope) ? envelope : envelope?.data || [];
+      const normalized = (usersData || []).map((u: any): User => ({
+        id: String(u.id),
+        username: u.name || u.username || u.email || '',
+        email: u.email || '',
+        firstName: u.firstName || '',
+        lastName: u.lastName || '',
+        role: u.role || u.rol || '',
+        permissions: u.permissions || [],
+        isActive: true,
+        createdDate: new Date().toISOString().split('T')[0],
+        lastLogin: undefined,
+        groups: u.groupIds || [],
+        password: '',
+        phone: u.phone || undefined,
+        address: u.address || undefined,
+        birthDate: u.birthdate || undefined,
+        avatar: u.avatar || undefined,
+      }));
+      this.saveUsersToStorage(normalized);
+      this.usersSubject.next(normalized);
+    } catch (e) {
+      console.warn('[UserService] syncUsers failed', e);
+    }
+  }
+
+  
+
+  setCurrentUser(userId: string): void {
+    this.currentUserId = userId;
+    this.saveCurrentUserIdToStorage(userId);
   }
 
   createUser(user: Omit<User, 'id' | 'createdDate'>): void {
@@ -145,7 +348,9 @@ export class UserService {
       createdDate: new Date().toISOString().split('T')[0]
     };
     const currentUsers = this.usersSubject.value;
-    this.usersSubject.next([...currentUsers, newUser]);
+    const updated = [...currentUsers, newUser];
+    this.saveUsersToStorage(updated);
+    this.usersSubject.next(updated);
   }
 
   updateUser(id: string, userData: Partial<User>): void {
@@ -153,12 +358,14 @@ export class UserService {
     const userIndex = currentUsers.findIndex(user => user.id === id);
     if (userIndex > -1) {
       currentUsers[userIndex] = { ...currentUsers[userIndex], ...userData };
+      this.saveUsersToStorage(currentUsers);
       this.usersSubject.next([...currentUsers]);
     }
   }
 
   deleteUser(id: string): void {
     const currentUsers = this.usersSubject.value.filter(user => user.id !== id);
+    this.saveUsersToStorage(currentUsers);
     this.usersSubject.next(currentUsers);
   }
 
@@ -188,6 +395,17 @@ export class UserService {
   isSuperAdmin(userId: string): boolean {
     const user = this.getUserById(userId);
     return user ? user.username === 'superAdmin' : false;
+  }
+
+  /**
+   * Comprueba si el usuario actual pertenece a un grupo dado.
+   * Un superAdmin siempre se considera miembro.
+   */
+  isMemberOfGroup(groupId: string): boolean {
+    const current = this.getCurrentUser();
+    if (!current) return false;
+    if (this.isSuperAdmin(current.id)) return true;
+    return current.groups.includes(groupId);
   }
 
   private generateId(): string {

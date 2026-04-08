@@ -3,7 +3,7 @@
   <div class="user-management-header">
     <div class="flex justify-between items-start mb-4">
       <div>
-        <h1 class="user-management-title">Gestión de Usuarios</h1>
+        <h1 class="user-management-title"><i class="pi pi-users"></i> Gestión de Usuarios</h1>
         <p class="user-management-subtitle">Administra usuarios, roles y permisos del sistema</p>
       </div>
       <button
@@ -13,7 +13,7 @@
         class="p-button-primary p-button-lg bg-gradient-to-r from-blue-600 to-indigo-600 border-0 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
         style="font-weight:600;"
         (click)="openNewUserDialog()"
-        *ngIf="canManageUsers()">
+        *ifHasPermission="'user.create'">
       </button>
     </div>
 
@@ -29,12 +29,9 @@
 
       <div class="stat-card">
         <div class="stat-card-icon">
-          <i class="pi pi-user-check"></i>
-        </div>
-        <div class="stat-card-title flex items-center justify-center gap-2">
           <i class="pi pi-check text-green-600"></i>
-          {{ activeUsers }}
         </div>
+        <div class="stat-card-title">{{ activeUsers }}</div>
         <div class="stat-card-subtitle">Usuarios Activos</div>
       </div>
 
@@ -123,25 +120,27 @@
             <div class="flex items-center justify-center gap-2">
               <span class="text-sm font-medium text-gray-900">{{ user.permissions.length }}</span>
               <span class="text-xs text-gray-500">permisos</span>
+            </div>
+          </td>
+          <td class="text-center">
+            <div class="action-buttons">
               <button
                 pButton
                 type="button"
                 icon="pi pi-eye"
                 class="btn-permissions p-button-sm"
                 (click)="openPermissionsDialog(user)"
-                title="Ver permisos">
+                title="Editar permisos"
+                *ifHasPermission="'permission.manage'">
               </button>
-            </div>
-          </td>
-          <td class="text-center">
-            <div class="action-buttons" *ngIf="canManageUsers() && !isSuperAdmin(user)">
               <button
                 pButton
                 type="button"
                 icon="pi pi-pencil"
                 class="btn-edit p-button-sm"
                 (click)="openEditUserDialog(user)"
-                title="Editar">
+                title="Editar"
+                *ifHasPermission="'user.update'">
               </button>
               <button
                 pButton
@@ -149,7 +148,8 @@
                 icon="pi pi-trash"
                 class="btn-delete p-button-sm"
                 (click)="deleteUser(user)"
-                title="Eliminar">
+                title="Eliminar"
+                *ifHasPermission="'user.delete'">
               </button>
             </div>
             <span *ngIf="isSuperAdmin(user)" class="text-sm text-gray-500 italic">Super Admin</span>
@@ -173,7 +173,7 @@
 </div>
 
 <!-- manual backdrop for dialogs -->
-<div *ngIf="showUserDialog || showPermissionsDialog" class="fixed inset-0 bg-black bg-opacity-50 z-9000"></div>
+<div *ngIf="showUserDialog || showPermissionsDialog || deleteConfirmModalVisible" class="fixed inset-0 bg-black bg-opacity-50 z-9000"></div>
 
 <!-- User Dialog -->
 <p-dialog
@@ -286,19 +286,19 @@
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+      <div class="flex justify-end items-center gap-4 mt-8 pt-6 border-t border-gray-200 px-6">
         <p-button
           type="button"
           label="Cancelar"
           icon="pi pi-times"
-          class="p-button-text p-button-lg"
+          class="p-button-secondary p-button-lg bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
           (click)="closeUserDialog()">
         </p-button>
         <p-button
           type="submit"
           [label]="isEditing ? 'Actualizar Usuario' : 'Crear Usuario'"
           icon="pi pi-check"
-          class="p-button-primary p-button-lg bg-gradient-to-r from-blue-600 to-indigo-600 border-0"
+          class="p-button-primary p-button-lg bg-gradient-to-r from-blue-600 to-indigo-600 border-0 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
           [disabled]="userForm.invalid">
         </p-button>
       </div>
@@ -340,6 +340,7 @@
                 type="checkbox"
                 [id]="permission.id"
                 [checked]="selectedPermissions.includes(permission.id)"
+                [disabled]="!canManagePermissions"
                 (change)="togglePermission(permission.id)"
                 class="permission-checkbox">
               <div class="permission-content">
@@ -352,23 +353,23 @@
       </div>
     </div>
 
-    <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+    <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 px-6">
       <div class="text-sm text-gray-600">
         <strong>{{ selectedPermissions.length }}</strong> permisos seleccionados
       </div>
-      <div class="flex gap-3">
+      <div class="flex gap-4">
         <p-button
           type="button"
           label="Cancelar"
           icon="pi pi-times"
-          class="p-button-text p-button-lg"
+          class="p-button-secondary p-button-lg bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
           (click)="closePermissionsDialog()">
         </p-button>
         <p-button
           type="button"
           label="Guardar Permisos"
           icon="pi pi-check"
-          class="p-button-primary p-button-lg bg-gradient-to-r from-green-600 to-emerald-600 border-0"
+          class="p-button-primary p-button-lg bg-gradient-to-r from-blue-600 to-indigo-600 border-0 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
           (click)="savePermissions()">
         </p-button>
       </div>
@@ -376,5 +377,49 @@
   </div>
 </p-dialog>
 
+<!-- Delete Confirmation Modal -->
+<p-dialog
+  [(visible)]="deleteConfirmModalVisible"
+  [modal]="true"
+  [appendTo]="'body'"
+  [baseZIndex]="10000"
+  [style]="{width: '500px', 'background-color': 'white'}"
+  header="Confirmar Eliminación"
+  [closable]="true"
+  styleClass="custom-dialog"
+  (onHide)="closeDeleteModal()">
+  
+  <div class="delete-modal-content">
+    <div class="text-center mb-4">
+      <i class="pi pi-exclamation-triangle text-4xl" style="color: #ef4444; margin-bottom: 1rem;"></i>
+    </div>
+    <h3 class="text-lg font-semibold text-gray-800 text-center mb-2">¿Seguro que deseas eliminar?</h3>
+    <p class="text-gray-600 text-center mb-6">
+      Se eliminará al usuario <strong>{{ userToDelete?.firstName }} {{ userToDelete?.lastName }}</strong> del sistema.
+    </p>
+    <p class="text-sm text-red-600 text-center">
+      Esta acción no se puede deshacer.
+    </p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 justify-end">
+      <p-button
+        type="button"
+        label="Cancelar"
+        icon="pi pi-times"
+        class="p-button-secondary p-button-lg bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
+        (click)="closeDeleteModal()">
+      </p-button>
+      <p-button
+        type="button"
+        label="Eliminar Usuario"
+        icon="pi pi-trash"
+        class="p-button-danger p-button-lg bg-gradient-to-r from-red-600 to-red-700 border-0 hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full text-white"
+        (click)="confirmDelete()">
+      </p-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
 <p-toast></p-toast>
-<p-confirmDialog></p-confirmDialog>

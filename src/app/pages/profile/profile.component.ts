@@ -31,8 +31,8 @@ import { Ticket } from '../../models/ticket.model';
 })
 export class ProfileComponent implements OnInit {
   isEditing = false;
-  user: UserProfile;
-  editingUser: UserProfile;
+  user: UserProfile | null = null;
+  editingUser: UserProfile | null = null;
   assignedTickets: Ticket[] = [];
   ticketSummary = {
     pendiente: 0,
@@ -49,8 +49,9 @@ export class ProfileComponent implements OnInit {
     private confirmationService: ConfirmationService,
     private router: Router
   ) {
-    this.user = this.profileService.getCurrentUser();
-    this.editingUser = { ...this.user };
+    const currentUser = this.profileService.getCurrentUser();
+    this.user = currentUser;
+    this.editingUser = currentUser ? { ...currentUser } : null;
   }
 
   ngOnInit() {
@@ -62,8 +63,15 @@ export class ProfileComponent implements OnInit {
   }
 
   loadAssignedTickets() {
+    if (!this.user) {
+      this.assignedTickets = [];
+      return;
+    }
+    
     this.ticketService.getTickets().subscribe(tickets => {
-      this.assignedTickets = tickets.filter(ticket => ticket.assignedTo === this.user.firstName);
+      this.assignedTickets = tickets.filter(ticket => 
+        ticket.assignedTo === this.user?.firstName || ticket.creator === this.user?.username
+      );
       this.updateTicketSummary();
     });
   }
@@ -84,7 +92,9 @@ export class ProfileComponent implements OnInit {
   }
 
   openTicketDetail(ticket: Ticket) {
-    this.router.navigate(['/group', 'test-group', 'ticket', ticket.id]);
+    if (ticket.groupId) {
+      this.router.navigate(['/group', ticket.groupId, 'ticket', ticket.id]);
+    }
   }
 
   toggleSidebar() {
@@ -93,32 +103,23 @@ export class ProfileComponent implements OnInit {
 
   toggleEdit() {
     if (this.isEditing) {
-      this.editingUser = { ...this.user };
+      this.editingUser = this.user ? { ...this.user } : null;
       this.isEditing = false;
     } else {
-      this.editingUser = { ...this.user };
+      this.editingUser = this.user ? { ...this.user } : null;
       this.isEditing = true;
     }
   }
 
   saveProfile() {
+    if (!this.editingUser) return;
+    
     // Validar campos obligatorios
     if (!this.editingUser.username || !this.editingUser.firstName || !this.editingUser.lastName || !this.editingUser.email || !this.editingUser.phone || !this.editingUser.address || !this.editingUser.birthDate) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campos inválidos',
         detail: 'Por favor completa todos los campos obligatorios',
-        styleClass: 'custom-toast'
-      });
-      return;
-    }
-
-    // Validar que las contraseñas coincidan si se ingresan
-    if (this.editingUser.password && this.editingUser.password !== this.editingUser.confirmPassword) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Las contraseñas no coinciden',
         styleClass: 'custom-toast'
       });
       return;
@@ -136,7 +137,7 @@ export class ProfileComponent implements OnInit {
   }
 
   cancelEdit() {
-    this.editingUser = { ...this.user };
+    this.editingUser = this.user ? { ...this.user } : null;
     this.isEditing = false;
   }
 

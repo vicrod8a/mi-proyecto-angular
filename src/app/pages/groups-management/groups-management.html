@@ -1,0 +1,103 @@
+<div class="groups-management-container">
+  <div class="header">
+    <h1>Gestión de Grupos</h1>
+    <p>Crea, edita y elimina grupos de trabajo</p>
+  </div>
+
+  <div class="content">
+    <!-- Form Section -->
+    <div class="form-section" *ifHasPermission="'group.create'">
+      <h2>{{ editingGroup ? 'Editar Grupo' : 'Crear Nuevo Grupo' }}</h2>
+      <form [formGroup]="groupForm" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="name">Nombre del Grupo</label>
+          <input
+            type="text"
+            id="name"
+            formControlName="name"
+            placeholder="Ej: Equipo Dev"
+            class="form-control"
+          />
+          <span class="error" *ngIf="groupForm.get('name')?.invalid && groupForm.get('name')?.touched">
+            El nombre es requerido
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Descripción</label>
+          <textarea
+            id="description"
+            formControlName="description"
+            placeholder="Describe el propósito del grupo"
+            class="form-control"
+            rows="4"
+          ></textarea>
+          <span class="error" *ngIf="groupForm.get('description')?.invalid && groupForm.get('description')?.touched">
+            La descripción es requerida
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="level">Nivel</label>
+          <select id="level" formControlName="level" class="form-control">
+            <option value="Básico">Básico</option>
+            <option value="Intermedio">Intermedio</option>
+            <option value="Avanzado">Avanzado</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="!groupForm.valid">
+            {{ editingGroup ? 'Actualizar' : 'Crear' }}
+          </button>
+          <button type="button" class="btn btn-secondary" *ngIf="editingGroup" (click)="cancelEdit()">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Groups List Section -->
+    <div class="groups-list-section">
+      <h2>Grupos Disponibles ({{ groups.length }})</h2>
+      <div class="groups-grid">
+        <div class="group-card" *ngFor="let group of groups">
+          <div class="group-header">
+            <h3>{{ group.name }}</h3>
+            <span class="level-badge" [ngClass]="'level-' + (group.level?.toLowerCase() || 'basico')">
+              {{ group.level }}
+            </span>
+          </div>
+
+          <p class="group-description">{{ group.description }}</p>
+
+          <div class="group-info">
+            <div class="info-item">
+              <span class="label">Miembros:</span>
+              <span class="value">{{ group.memberCount }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Tickets:</span>
+              <span class="value">{{ group.tickets || 0 }}</span>
+            </div>
+          </div>
+
+          <div class="group-actions">
+            <button class="btn btn-sm btn-primary" (click)="editGroup(group)" *ifHasPermission="'group.update'">
+              Editar
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="deleteGroup(group.id)" *ifHasPermission="'group.delete'">
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="groups.length === 0">
+        <p>No hay grupos disponibles. Crea uno para comenzar.</p>
+      </div>
+    </div>
+  </div>
+
+  <p-toast></p-toast>
+</div>

@@ -1,8 +1,24 @@
 <div class="p-6 min-h-screen bg-gray-50">
-  <h1 class="text-2xl font-bold mb-4">Reportes - {{ reportType | titlecase }}</h1>
+  <h1 class="text-2xl font-bold mb-4">Reportes - {{ reportType | titlecase }} <span *ngIf="groupName">para {{ groupName | titlecase }}</span></h1>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" *ngIf="chartData">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-600">{{ getSummaryLabel() }}</div>
+      <div class="text-2xl font-bold text-blue-600">{{ getTotalCount() }}</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-600">Categorías</div>
+      <div class="text-2xl font-bold text-green-600">{{ chartData.labels.length }}</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-600">Máximo</div>
+      <div class="text-2xl font-bold text-purple-600">{{ getMaxValue() }}</div>
+    </div>
+  </div>
 
   <div *ngIf="chartData" class="bg-white rounded-xl shadow p-6 h-96">
-    <p-chart [type]="reportType === 'groups' ? 'pie' : (reportType === 'tickets' ? 'bar' : 'line')"
+    <p-chart [type]="getChartType()"
              [data]="chartData"
              [options]="chartOptions"
              style="height:100%"></p-chart>

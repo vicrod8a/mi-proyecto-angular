@@ -40,7 +40,7 @@
       </li>
 
       <!-- Reports dropdown -->
-      <li>
+      <li *ifHasPermission="'report.read'">
         <button
           (click)="toggleReportsDropdown()"
           class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded w-full text-left">
@@ -50,7 +50,7 @@
         </button>
         <div *ngIf="reportsDropdownVisible && sidebarVisible" class="ml-4 mt-1 space-y-1">
           <a *ngFor="let r of reportLinks"
-             [routerLink]="r.link"
+             [routerLink]="['/group', currentGroup, 'reports', r.type]"
              routerLinkActive="bg-gray-700 text-white"
              class="flex items-center gap-2 p-2 text-gray-400 hover:bg-gray-700 hover:text-white rounded text-sm">
             <i [class]="r.icon"></i>
@@ -59,19 +59,30 @@
         </div>
       </li>
 
-      <!-- User Management (only for super admin) -->
-      <li *ngIf="canManageUsers()">
+      <!-- Groups Management -->
+      <li *ifHasPermission="'group.manage'">
         <a
-          [routerLink]="['/group', 'equipo-dev', 'users']"
+          routerLink="/groups"
           routerLinkActive="bg-gray-700 text-white"
           class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded w-full text-left">
-          <i class="pi pi-user-shield"></i>
+          <i class="pi pi-users"></i>
+          <span *ngIf="sidebarVisible">Gestión Grupos</span>
+        </a>
+      </li>
+
+      <!-- Users Management -->
+      <li *ifHasPermission="'user.read'">
+        <a
+          routerLink="/users"
+          routerLinkActive="bg-gray-700 text-white"
+          class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded w-full text-left">
+          <i class="pi pi-user"></i>
           <span *ngIf="sidebarVisible">Gestión Usuarios</span>
         </a>
       </li>
 
       <!-- Groups Section -->
-      <li>
+      <li *ifHasPermission="'group.read'">
         <button
           (click)="toggleGroupsDropdown()"
           class="flex items-center gap-2 p-2 text-gray-300 hover:bg-gray-700 hover:text-white rounded w-full text-left">
@@ -82,15 +93,32 @@
 
         <!-- Groups Dropdown -->
         <div *ngIf="groupsDropdownVisible && sidebarVisible" class="ml-4 mt-1 space-y-1">
-          <a
+          <div
             *ngFor="let group of groups"
-            [routerLink]="['/group', group.id]"
-            routerLinkActive="bg-gray-700 text-white"
             class="flex items-center gap-2 p-2 text-gray-400 hover:bg-gray-700 hover:text-white rounded text-sm">
-            <i class="pi pi-circle-fill text-xs" [ngClass]="group.isMember ? 'text-green-400' : 'text-gray-500'"></i>
-            <span class="truncate">{{ group.name }}</span>
-            <span class="text-xs text-gray-500 ml-auto">{{ group.memberCount }}</span>
-          </a>
+            <a
+              [routerLink]="['/group', group.id]"
+              routerLinkActive="bg-gray-700 text-white"
+              class="flex items-center gap-2 flex-1">
+              <i class="pi pi-circle-fill text-xs" [ngClass]="group.isMember ? 'text-green-400' : 'text-gray-500'"></i>
+              <span class="truncate">{{ group.name }}</span>
+              <span class="text-xs text-gray-500 ml-auto">{{ group.memberCount }}</span>
+            </a>
+            <button
+              *ngIf="!group.isMember"
+              (click)="joinGroup(group.id)"
+              class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"
+              title="Unirse al grupo">
+              Unirse
+            </button>
+            <button
+              *ngIf="group.isMember"
+              (click)="leaveGroup(group.id)"
+              class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
+              title="Salir del grupo">
+              Salir
+            </button>
+          </div>
         </div>
       </li>
 
@@ -115,5 +143,10 @@
         </a>
       </li>
     </ul>
+  </div>
+
+  <!-- Version at bottom -->
+  <div *ngIf="sidebarVisible" class="p-4 border-t border-gray-700 text-center text-gray-500 text-xs">
+    <p>v{{ appVersion }}</p>
   </div>
 </div>

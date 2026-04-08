@@ -1,1 +1,37 @@
-/* Additional styles if needed */
+/* Drag and Drop Styles */
+
+/* Make drop zones visually distinct */
+.bg-yellow-50,
+.bg-blue-50,
+.bg-purple-50,
+.bg-green-50 {
+  transition: background-color 0.2s ease;
+  border-radius: 0.5rem;
+}
+
+/* Draggable cards */
+[draggable="true"] {
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+[draggable="true"]:hover {
+  transform: translateY(-2px);
+}
+
+[draggable="true"]:active {
+  opacity: 0.7;
+  cursor: grabbing;
+}
+
+/* Drag feedback */
+[draggable="true"].dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+/* Drop zone feedback */
+.drop-zone-active {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.5) !important;
+}

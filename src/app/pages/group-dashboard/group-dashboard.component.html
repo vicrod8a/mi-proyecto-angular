@@ -1,12 +1,11 @@
 <div class="p-6 bg-gray-100 min-h-screen">
   <h2 class="text-2xl font-bold mb-4">Dashboard de grupo {{ groupName }}</h2>
-
-  <!-- LLM Model Display -->
-  <div class="bg-blue-100 p-4 rounded-lg mb-6">
-    <h3 class="font-semibold text-blue-800">Modelo LLM en uso: {{ llmModel }}</h3>
+  <div *ngIf="!ticketRead()" class="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded">
+    No tienes permiso para ver tickets en este grupo. Solicita el permiso <strong>ticket.read</strong> para acceder al tablero y la lista.
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" *ngIf="ticketRead()">
     <div class="bg-white shadow rounded p-4">
       <h3 class="font-semibold">Pendientes</h3>
       <p>{{ counts()['pendiente'] }}</p>
@@ -25,37 +24,178 @@
     </div>
   </div>
 
-  <div class="mb-6 flex space-x-4">
+  <div class="mb-6 flex space-x-4" *ngIf="ticketRead()">
     <button
       (click)="setViewMode('kanban')"
       [class.bg-blue-500]="viewMode === 'kanban'"
       [class.bg-gray-300]="viewMode !== 'kanban'"
-      class="px-4 py-2 text-white rounded">
+      class="px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-300">
       Vista Kanban
     </button>
     <button
       (click)="setViewMode('list')"
       [class.bg-blue-500]="viewMode === 'list'"
       [class.bg-gray-300]="viewMode !== 'list'"
-      class="px-4 py-2 text-white rounded">
+      class="px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-300">
       Vista Lista
     </button>
-    <button (click)="createTicket()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+    <button *ngIf="permissionService.hasPermission('ticket.create')" (click)="createTicket()" class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300">
       Crear Ticket
     </button>
     <button
-      *ngIf="canManageGroup"
-      (click)="manageGroup()"
-      class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
-      Gestionar Grupo
+      *ngIf="canManageGroup()"
+      (click)="openMembersDialog()"
+      class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 shadow-lg hover:shadow-xl transition-all duration-300">
+      Gestionar Miembros
+    </button>
+    <button
+      *ngIf="canManageGroup()"
+      (click)="openInviteDialog()"
+      class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300">
+      Código de Invitación
     </button>
   </div>
 
-  <div *ngIf="viewMode === 'kanban'">
-    <app-ticket-kanban></app-ticket-kanban>
+  <div *ngIf="ticketRead()">
+    <div *ngIf="tickets.length === 0" class="p-6 bg-white rounded shadow text-center text-gray-600">
+      Este grupo no tiene tickets todavía.
+    </div>
+
+    <div *ngIf="viewMode === 'kanban'">
+      <app-ticket-kanban [groupId]="groupId"></app-ticket-kanban>
+    </div>
+
+    <div *ngIf="viewMode === 'list'">
+      <app-ticket-list [groupId]="groupId"></app-ticket-list>
+    </div>
   </div>
 
-  <div *ngIf="viewMode === 'list'">
-    <app-ticket-list></app-ticket-list>
-  </div>
+  <!-- manual backdrop for dialogs -->
+  <div *ngIf="showMembersDialog || showInviteDialog" class="fixed inset-0 bg-black bg-opacity-50 z-9000"></div>
+
+  <!-- Members Management Dialog -->
+  <p-dialog
+    [(visible)]="showMembersDialog"
+    [modal]="true"
+    [appendTo]="'body'" [baseZIndex]="10000"
+    [style]="{width: '600px', 'background-color': 'white'}"
+    header="Miembros del Grupo"
+    [closable]="true"
+    styleClass="custom-dialog"
+    [appendTo]="'body'"
+    [baseZIndex]="10000"
+    (onHide)="closeMembersDialog()">
+    
+    <div class="p-4">
+      <p class="mb-4 text-gray-600">
+        Gestiona los miembros de este grupo. Total: {{ groupMembers.length }} miembros
+      </p>
+      
+      <p-table [value]="groupMembers" [paginator]="true" [rows]="5" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Acciones</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-member>
+          <tr>
+            <td>{{ member.firstName }} {{ member.lastName }}</td>
+            <td>{{ member.email }}</td>
+            <td>{{ member.role }}</td>
+            <td>
+              <button
+                pButton
+                type="button"
+                icon="pi pi-times"
+                class="p-button-danger p-button-sm"
+                pTooltip="Remover del grupo"
+                (click)="removeMember(member.id)">
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4" class="text-center py-4">No hay miembros en este grupo</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        label="Cerrar"
+        icon="pi pi-times"
+        class="p-button-secondary p-button-lg bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
+        (click)="closeMembersDialog()">
+      </p-button>
+    </ng-template>
+  </p-dialog>
+
+  <!-- Invitation Code Dialog -->
+  <p-dialog
+    [(visible)]="showInviteDialog"
+    [modal]="true"
+    [appendTo]="'body'" [baseZIndex]="10000"
+    [style]="{width: '500px', 'background-color': 'white'}"
+    header="Código de Invitación"
+    [closable]="true"
+    styleClass="custom-dialog"
+    [appendTo]="'body'"
+    [baseZIndex]="10000"
+    (onHide)="closeInviteDialog()">
+    
+    <div class="p-4">
+      <p class="mb-4 text-gray-600">
+        Comparte este código para que otros usuarios puedan unirse al grupo.
+      </p>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Código de Invitación
+        </label>
+        <div class="flex gap-2">
+          <input
+            pInputText
+            [(ngModel)]="invitationCode"
+            readonly
+            class="flex-1"
+            style="font-family: monospace; font-size: 18px; text-align: center; background-color: #f8f9fa;">
+          <p-button
+            icon="pi pi-copy"
+            pTooltip="Copiar código"
+            class="p-button-info p-button-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+            (click)="copyCode()">
+          </p-button>
+        </div>
+      </div>
+      
+      <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+        <p class="text-sm text-blue-800">
+          <strong>Nota:</strong> Cualquier usuario con este código puede unirse al grupo.
+          Si el código se compromete, genera uno nuevo.
+        </p>
+      </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        label="Regenerar Código"
+        icon="pi pi-refresh"
+        class="p-button-warning p-button-lg bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
+        (click)="regenerateCode()">
+      </p-button>
+      <p-button
+        label="Cerrar"
+        icon="pi pi-times"
+        class="p-button-secondary p-button-lg bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
+        (click)="closeInviteDialog()">
+      </p-button>
+    </ng-template>
+  </p-dialog>
+
+  <p-toast></p-toast>
 </div>

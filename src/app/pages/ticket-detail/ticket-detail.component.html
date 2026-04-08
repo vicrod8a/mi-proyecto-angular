@@ -1,4 +1,20 @@
-<div class="p-6 bg-gray-100 min-h-screen" *ngIf="ticket">
+<div class="p-6 bg-gray-100 min-h-screen">
+<p-toast></p-toast>
+  <div *ngIf="isLoading" class="text-center">
+    <p class="text-gray-600 text-lg">Cargando ticket...</p>
+  </div>
+
+  <div *ngIf="ticketNotFound && !isLoading" class="text-center text-gray-600">
+    <p>Ticket no encontrado.</p>
+    <button (click)="goBack()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">← Volver</button>
+  </div>
+
+  <div *ngIf="!isLoading && !ticketNotFound && !ticket" class="text-center text-gray-600">
+    <p>Ticket no disponible.</p>
+    <button (click)="goBack()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">← Volver</button>
+  </div>
+
+  <div *ngIf="ticket && !isLoading">
   <button (click)="goBack()" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">← Volver</button>
 
   <div class="bg-white p-6 rounded-lg shadow">
@@ -49,8 +65,9 @@
       <p><strong>Fecha límite:</strong> {{ ticket.deadline | date:'medium' }}</p>
       <p><strong>Creador:</strong> {{ ticket.creator }}</p>
 
-      <div *ngIf="canEdit" class="mt-4">
-        <button (click)="toggleEdit()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Editar</button>
+      <div *ngIf="canEdit || canDelete" class="mt-4 flex gap-2">
+        <button *ngIf="canEdit" (click)="toggleEdit()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Editar</button>
+        <button *ngIf="canDelete" (click)="deleteTicket()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Eliminar</button>
       </div>
 
       <div *ngIf="canChangeStatus" class="mt-4">
@@ -78,10 +95,30 @@
     </div>
 
     <div class="mt-6">
-      <h3 class="text-lg font-semibold mb-2">Historial</h3>
-      <div *ngFor="let entry of ticket.history" class="bg-gray-50 p-3 rounded mb-2">
-        <p><strong>{{ entry.user }}</strong> - {{ entry.date | date:'short' }}</p>
-        <p>{{ entry.action }}</p>
+      <h3 class="text-lg font-semibold mb-2">📋 Historial de Cambios</h3>
+      <div *ngIf="ticket.history.length === 0" class="bg-blue-50 p-3 rounded text-gray-600 text-sm">
+        <p>Sin cambios registrados aún</p>
+      </div>
+      <div *ngFor="let entry of ticket.history | reverse; let i = index" class="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg mb-3 border-l-4 border-blue-500 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <p class="text-sm text-gray-600">
+              <strong class="text-gray-800">{{ entry.user }}</strong>
+              <span class="text-gray-500 ml-2">{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</span>
+            </p>
+            <p class="text-gray-700 mt-1" *ngIf="!entry.field">
+              {{ entry.action }}
+            </p>
+            <div *ngIf="entry.field" class="mt-2 bg-white p-2 rounded border border-gray-200">
+              <p class="font-semibold text-gray-800 text-sm">{{ entry.action }}</p>
+              <div class="mt-1 text-sm space-y-1">
+                <p><span class="text-red-600 font-semibold">Anterior:</span> <span class="text-red-700 line-through">{{ entry.oldValue }}</span></p>
+                <p><span class="text-green-600 font-semibold">Nuevo:</span> <span class="text-green-700 font-semibold">{{ entry.newValue }}</span></p>
+              </div>
+            </div>
+          </div>
+          <span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full ml-2">{{ i + 1 }}</span>
+        </div>
       </div>
     </div>
   </div>

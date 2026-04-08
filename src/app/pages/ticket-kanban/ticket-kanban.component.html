@@ -6,53 +6,101 @@
 
   <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
     <!-- Pendiente -->
-    <div class="bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-semibold mb-4 text-yellow-600">Pendiente</h3>
-      <div class="space-y-3 min-h-[200px]">
-        <div *ngFor="let ticket of pending" class="bg-yellow-50 p-3 rounded border cursor-pointer hover:shadow-md" (click)="openTicketDetail(ticket)">
-          <h4 class="font-medium">{{ ticket.title }}</h4>
-          <p class="text-sm text-gray-600">Asignado: {{ ticket.assignedTo }}</p>
-          <p class="text-sm text-gray-600">Prioridad: {{ ticket.priority }}</p>
-          <p class="text-sm text-gray-600">{{ ticket.createdDate | date:'short' }}</p>
+    <div 
+      class="bg-white p-4 rounded-lg shadow"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event, 'Pendiente')">
+      <h3 class="text-lg font-semibold mb-4 text-yellow-600">Pendiente ({{ pending.length }})</h3>
+      <div class="space-y-3 min-h-[200px] bg-yellow-50 p-2 rounded">
+        <div 
+          *ngFor="let ticket of pending" 
+          class="bg-yellow-100 p-3 rounded border-2 border-yellow-300 cursor-move hover:shadow-lg hover:border-yellow-400 transition-all relative"
+          draggable="true"
+          (dragstart)="onDragStart($event, ticket, 'Pendiente')"
+          (dragend)="onDragEnd()"
+          (click)="onClick($event, ticket)">
+          <button *ifHasPermission="'ticket.delete'" (click)="deleteTicket(ticket, $event)" class="absolute top-1 right-1 text-red-600 hover:text-red-800" title="Eliminar">
+            <i class="pi pi-trash"></i>
+          </button>
+          <h4 class="font-medium text-gray-800">{{ ticket.title }}</h4>
+          <p class="text-xs text-gray-600 mt-1">Asignado: {{ ticket.assignedTo }}</p>
+          <p class="text-xs text-gray-600">Prioridad: {{ ticket.priority }}</p>
+          <span class="inline-block text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded mt-2">{{ ticket.createdDate | date:'short' }}</span>
         </div>
       </div>
     </div>
 
     <!-- En progreso -->
-    <div class="bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-semibold mb-4 text-blue-600">En progreso</h3>
-      <div class="space-y-3 min-h-[200px]">
-        <div *ngFor="let ticket of inProgress" class="bg-blue-50 p-3 rounded border cursor-pointer hover:shadow-md" (click)="openTicketDetail(ticket)">
-          <h4 class="font-medium">{{ ticket.title }}</h4>
-          <p class="text-sm text-gray-600">Asignado: {{ ticket.assignedTo }}</p>
-          <p class="text-sm text-gray-600">Prioridad: {{ ticket.priority }}</p>
-          <p class="text-sm text-gray-600">{{ ticket.createdDate | date:'short' }}</p>
+    <div 
+      class="bg-white p-4 rounded-lg shadow"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event, 'En progreso')">
+      <h3 class="text-lg font-semibold mb-4 text-blue-600">En progreso ({{ inProgress.length }})</h3>
+      <div class="space-y-3 min-h-[200px] bg-blue-50 p-2 rounded">
+        <div 
+          *ngFor="let ticket of inProgress" 
+          class="bg-blue-100 p-3 rounded border-2 border-blue-300 cursor-move hover:shadow-lg hover:border-blue-400 transition-all relative"
+          draggable="true"
+          (dragstart)="onDragStart($event, ticket, 'En progreso')"
+          (dragend)="onDragEnd()"
+          (click)="onClick($event, ticket)">
+          <button *ifHasPermission="'ticket.delete'" (click)="deleteTicket(ticket, $event)" class="absolute top-1 right-1 text-red-600 hover:text-red-800" title="Eliminar">
+            <i class="pi pi-trash"></i>
+          </button>
+          <h4 class="font-medium text-gray-800">{{ ticket.title }}</h4>
+          <p class="text-xs text-gray-600 mt-1">Asignado: {{ ticket.assignedTo }}</p>
+          <p class="text-xs text-gray-600">Prioridad: {{ ticket.priority }}</p>
+          <span class="inline-block text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded mt-2">{{ ticket.createdDate | date:'short' }}</span>
         </div>
       </div>
     </div>
 
     <!-- Revisión -->
-    <div class="bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-semibold mb-4 text-purple-600">Revisión</h3>
-      <div class="space-y-3 min-h-[200px]">
-        <div *ngFor="let ticket of review" class="bg-purple-50 p-3 rounded border cursor-pointer hover:shadow-md" (click)="openTicketDetail(ticket)">
-          <h4 class="font-medium">{{ ticket.title }}</h4>
-          <p class="text-sm text-gray-600">Asignado: {{ ticket.assignedTo }}</p>
-          <p class="text-sm text-gray-600">Prioridad: {{ ticket.priority }}</p>
-          <p class="text-sm text-gray-600">{{ ticket.createdDate | date:'short' }}</p>
+    <div 
+      class="bg-white p-4 rounded-lg shadow"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event, 'Revisión')">
+      <h3 class="text-lg font-semibold mb-4 text-purple-600">Revisión ({{ review.length }})</h3>
+      <div class="space-y-3 min-h-[200px] bg-purple-50 p-2 rounded">
+        <div 
+          *ngFor="let ticket of review" 
+          class="bg-purple-100 p-3 rounded border-2 border-purple-300 cursor-move hover:shadow-lg hover:border-purple-400 transition-all relative"
+          draggable="true"
+          (dragstart)="onDragStart($event, ticket, 'Revisión')"
+          (dragend)="onDragEnd()"
+          (click)="onClick($event, ticket)">
+          <button *ifHasPermission="'ticket.delete'" (click)="deleteTicket(ticket, $event)" class="absolute top-1 right-1 text-red-600 hover:text-red-800" title="Eliminar">
+            <i class="pi pi-trash"></i>
+          </button>
+          <h4 class="font-medium text-gray-800">{{ ticket.title }}</h4>
+          <p class="text-xs text-gray-600 mt-1">Asignado: {{ ticket.assignedTo }}</p>
+          <p class="text-xs text-gray-600">Prioridad: {{ ticket.priority }}</p>
+          <span class="inline-block text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded mt-2">{{ ticket.createdDate | date:'short' }}</span>
         </div>
       </div>
     </div>
 
     <!-- Hecho -->
-    <div class="bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-semibold mb-4 text-green-600">Hecho</h3>
-      <div class="space-y-3 min-h-[200px]">
-        <div *ngFor="let ticket of done" class="bg-green-50 p-3 rounded border cursor-pointer hover:shadow-md" (click)="openTicketDetail(ticket)">
-          <h4 class="font-medium">{{ ticket.title }}</h4>
-          <p class="text-sm text-gray-600">Asignado: {{ ticket.assignedTo }}</p>
-          <p class="text-sm text-gray-600">Prioridad: {{ ticket.priority }}</p>
-          <p class="text-sm text-gray-600">{{ ticket.createdDate | date:'short' }}</p>
+    <div 
+      class="bg-white p-4 rounded-lg shadow"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event, 'Hecho')">
+      <h3 class="text-lg font-semibold mb-4 text-green-600">Hecho ({{ done.length }})</h3>
+      <div class="space-y-3 min-h-[200px] bg-green-50 p-2 rounded">
+        <div 
+          *ngFor="let ticket of done" 
+          class="bg-green-100 p-3 rounded border-2 border-green-300 cursor-move hover:shadow-lg hover:border-green-400 transition-all relative"
+          draggable="true"
+          (dragstart)="onDragStart($event, ticket, 'Hecho')"
+          (dragend)="onDragEnd()"
+          (click)="onClick($event, ticket)">
+          <button *ifHasPermission="'ticket.delete'" (click)="deleteTicket(ticket, $event)" class="absolute top-1 right-1 text-red-600 hover:text-red-800" title="Eliminar">
+            <i class="pi pi-trash"></i>
+          </button>
+          <h4 class="font-medium text-gray-800">{{ ticket.title }}</h4>
+          <p class="text-xs text-gray-600 mt-1">Asignado: {{ ticket.assignedTo }}</p>
+          <p class="text-xs text-gray-600">Prioridad: {{ ticket.priority }}</p>
+          <span class="inline-block text-xs bg-green-200 text-green-800 px-2 py-1 rounded mt-2">{{ ticket.createdDate | date:'short' }}</span>
         </div>
       </div>
     </div>

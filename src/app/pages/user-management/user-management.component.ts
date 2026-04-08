@@ -27,7 +27,8 @@ import { PermissionService } from '../../services/permission.service';
     ButtonModule,
     InputTextModule,
     ToastModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    IfHasPermissionDirective
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './user-management.component.html',
@@ -41,10 +42,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   // previously used for charts
   showUserDialog = false;
   showPermissionsDialog = false;
+  deleteConfirmModalVisible = false;
   isEditing = false;
   selectedUser: User | null = null;
+  userToDelete: User | null = null;
   userForm: FormGroup;
   selectedPermissions: string[] = [];
+  get canManagePermissions(): boolean {
+    return this.permissionService.hasPermission('permission.manage');
+  }
   availableGroups = [
     { label: 'Equipo Dev', value: 'equipo-dev' },
     { label: 'Soporte', value: 'soporte' },
@@ -160,19 +166,24 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   deleteUser(user: User) {
-    this.confirmationService.confirm({
-      message: `¿Está seguro de que desea eliminar al usuario ${user.firstName} ${user.lastName}?`,
-      header: 'Confirmar eliminación',
-      icon: 'pi pi-exclamation-triangle',
-      accept: () => {
-        this.userService.deleteUser(user.id);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Usuario eliminado correctamente'
-        });
-      }
+    this.userToDelete = user;
+    this.deleteConfirmModalVisible = true;
+  }
+
+  confirmDelete() {
+    if (!this.userToDelete) return;
+    this.userService.deleteUser(this.userToDelete.id);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Éxito',
+      detail: 'Usuario eliminado correctamente'
     });
+    this.closeDeleteModal();
+  }
+
+  closeDeleteModal() {
+    this.deleteConfirmModalVisible = false;
+    this.userToDelete = null;
   }
 
   savePermissions() {
@@ -196,6 +207,12 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
     this.showPermissionsDialog = false;
     this.loadUsers(); // Refresh the list
+
+    // If the current logged-in user had their permissions changed, reapply them.
+    const currentUser = this.userService.getCurrentUser();
+    if (currentUser && this.selectedUser && currentUser.id === this.selectedUser.id) {
+      this.permissionService.setPermissions(this.selectedPermissions);
+    }
   }
 
   closeUserDialog() {

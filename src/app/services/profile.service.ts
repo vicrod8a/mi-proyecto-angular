@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, map } from 'rxjs';
+import { UserService, User } from './user.service';
 
 export interface UserProfile {
-  id: number;
+  id: string;
   username: string;
   firstName: string;
   lastName: string;
@@ -12,47 +13,102 @@ export interface UserProfile {
   birthDate: string;
   password?: string;
   confirmPassword?: string;
-  avatar: string;
-  joinDate: string;
+  avatar?: string;
+  role?: string;
+  createdDate?: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProfileService {
-  private currentUser: UserProfile = {
-    id: 1,
-    username: 'juanperez',
-    firstName: 'Juan',
-    lastName: 'Pérez',
-    email: 'juan.perez@example.com',
-    phone: '+34 666 777 888',
-    address: 'Calle Principal 123, Madrid',
-    birthDate: '1990-05-15',
-    avatar: 'https://via.placeholder.com/200',
-    joinDate: '2024-01-15'
-  };
-
-  private userSubject = new BehaviorSubject<UserProfile>(this.currentUser);
+  private userSubject = new BehaviorSubject<UserProfile | null>(null);
   public user$ = this.userSubject.asObservable();
 
-  constructor() {}
+  constructor(private userService: UserService) {
+    this.loadCurrentUser();
+  }
 
-  getUser(): Observable<UserProfile> {
+  private loadCurrentUser(): void {
+    const currentUser = this.userService.getCurrentUser();
+    if (currentUser) {
+      this.updateUserSubject(currentUser);
+    }
+    
+    this.userService.users$.subscribe(users => {
+      const current = this.userService.getCurrentUser();
+      if (current) {
+        this.updateUserSubject(current);
+      }
+    });
+  }
+
+  private updateUserSubject(user: User): void {
+    const userProfile: UserProfile = {
+      id: user.id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone || '',
+      address: user.address || '',
+      birthDate: user.birthDate || '',
+      avatar: user.avatar || 'https://via.placeholder.com/200',
+      role: user.role,
+      createdDate: user.createdDate
+    };
+    this.userSubject.next(userProfile);
+  }
+
+  getUser(): Observable<UserProfile | null> {
     return this.user$;
   }
 
-  updateUser(user: Partial<UserProfile>): void {
-    this.currentUser = { ...this.currentUser, ...user };
-    this.userSubject.next(this.currentUser);
+  updateUser(userProfile: Partial<UserProfile>): void {
+    if (!userProfile.id) return;
+    
+    const updateData: Partial<User> = {
+      username: userProfile.username,
+      firstName: userProfile.firstName,
+      lastName: userProfile.lastName,
+      email: userProfile.email,
+      phone: userProfile.phone,
+      address: userProfile.address,
+      birthDate: userProfile.birthDate
+    };
+    
+    this.userService.updateUser(userProfile.id, updateData);
+    
+    const updatedUser = this.userService.getUserById(userProfile.id);
+    if (updatedUser) {
+      this.updateUserSubject(updatedUser);
+    }
   }
 
   deleteUser(): void {
-    // Aquí iría la lógica para eliminar la cuenta del usuario
-    console.log('Usuario eliminado');
+    const currentUser = this.userService.getCurrentUser();
+    if (currentUser) {
+      this.userService.deleteUser(currentUser.id);
+      this.userSubject.next(null);
+    }
   }
 
-  getCurrentUser(): UserProfile {
-    return this.currentUser;
+  getCurrentUser(): UserProfile | null {
+    const current = this.userService.getCurrentUser();
+    if (!current) return null;
+    
+    return {
+      id: current.id,
+      username: current.username,
+      firstName: current.firstName,
+      lastName: current.lastName,
+      email: current.email,
+      phone: current.phone || '',
+      address: current.address || '',
+      birthDate: current.birthDate || '',
+      avatar: current.avatar || 'https://via.placeholder.com/200',
+      role: current.role,
+      createdDate: current.createdDate
+    };
   }
 }

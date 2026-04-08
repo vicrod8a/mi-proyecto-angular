@@ -3,6 +3,12 @@
 
   <!-- Quick Filters -->
   <app-quick-filters (filterChanged)="onFilterChanged($event)"></app-quick-filters>
+  <!-- export button visible when user is viewing own tickets and there are created ones -->
+  <div class="mt-4" *ngIf="canExport">
+    <button (click)="exportMyTickets()" class="px-4 py-2 bg-blue-600 text-white rounded">
+      Exportar tickets creados
+    </button>
+  </div>
 
   <div class="bg-white p-4 rounded-lg shadow mb-6">
     <h3 class="text-lg font-semibold mb-4">Filtros</h3>
@@ -53,11 +59,12 @@
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" (click)="changeSort('deadline')">
             Fecha límite {{ sortBy === 'deadline' ? (sortOrder === 'asc' ? '↑' : '↓') : '' }}
           </th>
+          <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
-        <tr *ngFor="let ticket of filteredTickets" class="cursor-pointer hover:bg-gray-50" (click)="openTicketDetail(ticket)">
-          <td class="px-6 py-4 whitespace-nowrap">
+        <tr *ngFor="let ticket of filteredTickets" class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap cursor-pointer" (click)="openTicketDetail(ticket)">
             <div class="text-sm font-medium text-gray-900">{{ ticket.id }} - {{ ticket.title }}</div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
@@ -74,6 +81,14 @@
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.assignedTo }}</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.priority }}</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.deadline | date:'short' }}</td>
+          <td class="px-6 py-4 text-center">
+            <button *ifHasPermission="'ticket.update'" (click)="$event.stopPropagation(); editTicket(ticket)" class="text-blue-600 hover:text-blue-800 mr-3" title="Editar">
+              <i class="pi pi-pencil"></i>
+            </button>
+            <button *ifHasPermission="'ticket.delete'" (click)="$event.stopPropagation(); deleteTicket(ticket)" class="text-red-600 hover:text-red-800" title="Eliminar">
+              <i class="pi pi-trash"></i>
+            </button>
+          </td>
         </tr>
       </tbody>
     </table>

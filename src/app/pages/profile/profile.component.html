@@ -1,13 +1,10 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
-<div class="min-h-screen bg-gray-50 p-6">
-  <!-- Header -->
+<div class="min-h-screen bg-gray-50 p-6" *ngIf="user">
   <div class="mb-8">
     <div class="flex items-center justify-between">
-      <button class="p-2 rounded-lg hover:bg-gray-200 transition" (click)="toggleSidebar()" title="Menú">
-        <i class="pi pi-bars text-xl"></i>
-      </button>
+      <div></div>
       <h1 class="text-3xl font-bold flex items-center gap-3">
         <i class="pi pi-user"></i>
         Mi Perfil
@@ -20,9 +17,9 @@
   <div class="max-w-4xl mx-auto space-y-6">
     <!-- Avatar Section -->
     <div class="flex flex-col items-center py-8 bg-white rounded-xl shadow">
-      <img [src]="user.avatar" alt="Avatar del usuario" class="w-24 h-24 rounded-full border-4 border-blue-500">
-      <h2 class="text-2xl font-bold mt-4">{{ user.firstName }} {{ user.lastName }}</h2>
-      <p class="text-gray-500 mt-1">Miembro desde {{ user.joinDate | date: 'dd/MM/yyyy' }}</p>
+      <img [src]="user?.avatar || 'https://via.placeholder.com/200'" alt="Avatar del usuario" class="w-24 h-24 rounded-full border-4 border-blue-500">
+      <h2 class="text-2xl font-bold mt-4">{{ user?.firstName }} {{ user?.lastName }}</h2>
+      <p class="text-gray-500 mt-1">Miembro desde {{ user?.createdDate | date: 'dd/MM/yyyy' }}</p>
     </div>
 
     <!-- Profile Information Card -->
@@ -68,7 +65,7 @@
         </div>
       </div>
 
-      <div *ngIf="isEditing" class="space-y-4">
+      <div *ngIf="isEditing && editingUser" class="space-y-4">
         <div>
           <label for="username" class="block font-semibold text-gray-700 mb-2">Nombre de Usuario *</label>
           <input 

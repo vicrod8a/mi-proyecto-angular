@@ -1,0 +1,114 @@
+{
+  "description": "Estructura de datos almacenados en localStorage",
+  "keys": {
+    "mi-proyecto-users": {
+      "description": "Lista de usuarios del sistema",
+      "example": [
+        {
+          "id": "1",
+          "username": "superAdmin",
+          "email": "admin@company.com",
+          "firstName": "Super",
+          "lastName": "Admin",
+          "role": "Super Administrator",
+          "permissions": ["ticket.create", "ticket.read", "ticket.update", "ticket.delete", "group.create", "group.read", "group.update", "group.delete", "user.create", "user.read", "user.update", "user.delete", "permission.manage", "system.admin", "reports.view"],
+          "isActive": true,
+          "createdDate": "2024-01-01",
+          "lastLogin": "2024-12-09",
+          "groups": ["equipo-dev", "soporte"],
+          "password": "SuperAdmin@123",
+          "phone": "+34 912 345 678",
+          "address": "Calle Principal 123, Madrid, España",
+          "birthDate": "1985-05-15",
+          "avatar": "https://i.pravatar.cc/150?img=1"
+        }
+      ],
+      "persistent": true
+    },
+    "mi-proyecto-current-user": {
+      "description": "ID del usuario actualmente conectado",
+      "example": "1",
+      "persistent": true
+    },
+    "mi-proyecto-groups": {
+      "description": "Lista de grupos del sistema",
+      "example": [
+        {
+          "id": "equipo-dev",
+          "name": "Equipo Dev",
+          "description": "Equipo de desarrollo principal",
+          "memberCount": 8,
+          "isMember": false,
+          "level": "Avanzado",
+          "author": "Juan Pérez",
+          "members": "Juan, María, Carlos, Pedro",
+          "tickets": 15,
+          "createdDate": "2024-01-10"
+        }
+      ],
+      "persistent": true
+    },
+    "mi-proyecto-tickets": {
+      "description": "Lista de tickets/tareas del sistema",
+      "example": [
+        {
+          "id": "1",
+          "title": "Implementar autenticación con JWT",
+          "description": "Crear el sistema de autenticación con JWT para seguridad mejorada",
+          "status": "Hecho",
+          "assignedTo": "Juan",
+          "groupId": "equipo-dev",
+          "priority": "1 - Urgente",
+          "createdDate": "2024-01-01T00:00:00.000Z",
+          "deadline": "2024-01-05T00:00:00.000Z",
+          "creator": "Super",
+          "comments": [],
+          "history": []
+        }
+      ],
+      "persistent": true
+    }
+  },
+  "notas": [
+    "Los datos se persisten automáticamente en localStorage durante toda la sesión",
+    "Al crear, actualizar o eliminar data, se guarda inmediatamente en localStorage",
+    "Si no hay datos en localStorage, se cargan los datos por defecto del servicio",
+    "El usuario actual se establece automáticamente como 'superAdmin' (id: 1) si no hay sesión activa",
+    "Todos los datos están en formato JSON y se pueden editar manualmente en DevTools -> Application -> Local Storage",
+    "Para limpiar todos los datos, usar: localStorage.clear() en la consola"
+  ],
+  "caracteristicas": {
+    "grupos": {
+      "creacion": "Crear nuevos grupos con nombre y descripción",
+      "edicion": "Editar información del grupo",
+      "eliminacion": "Eliminar grupos existentes",
+      "miembros": "Ver cantidad de miembros por grupo",
+      "tickets": "Ver tickets asociados a cada grupo"
+    },
+    "usuarios": {
+      "creacion": "Crear nuevos usuarios con datos completos",
+      "edicion": "Editar perfil del usuario",
+      "eliminacion": "Eliminar usuarios del sistema",
+      "permisos": "Asignar y revocar permisos por usuario",
+      "grupos": "Asignar usuarios a grupos",
+      "login": "Sistema de login con email y contraseña"
+    },
+    "tickets": {
+      "creacion": "Crear tickets dentro de grupos con asignación de usuarios",
+      "edicion": "Editar estado, prioridad y asignación de tickets",
+      "eliminacion": "Eliminar tickets existentes",
+      "filtrado": "Filtrar por estado, prioridad, asignado y grupos",
+      "ordenamiento": "Ordenar por fecha de creación y otros campos"
+    },
+    "reportes": {
+      "usuarios": "Distribución de usuarios por rol",
+      "tickets": "Distribución de tickets por estado",
+      "grupos": "Cantidad de miembros por grupo"
+    },
+    "perfil": {
+      "datos": "Ver y editar datos personales del usuario actual",
+      "tickets_asignados": "Ver tickets asignados al usuario",
+      "resumen": "Resumen de tickets por estado"
+    }
+  }
+}

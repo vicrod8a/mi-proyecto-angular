@@ -37,7 +37,19 @@ export const routes: Routes = [
         .then(m => m.ProfileComponent)
   },
   {
-    path: 'group/:name',
+    path: 'groups',
+    loadComponent: () =>
+      import('./pages/groups-management/groups-management')
+        .then(m => m.GroupsManagement)
+  },
+  {
+    path: 'users',
+    loadComponent: () =>
+      import('./pages/user-management/user-management.component')
+        .then(m => m.UserManagementComponent)
+  },
+  {
+    path: 'group/:id',
     children: [
       {
         path: '',
@@ -48,8 +60,8 @@ export const routes: Routes = [
       {
         path: 'manage',
         loadComponent: () =>
-          import('./pages/group-management/group-management.component')
-            .then(m => m.GroupManagementComponent)
+          import('./pages/groups-management/groups-management')
+            .then(m => m.GroupsManagement)
       },
       {
         path: 'users',
@@ -62,6 +74,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/reports/reports.component')
             .then(m => m.ReportsComponent)
+      },
+      {
+        path: 'ticket/:id/edit',
+        loadComponent: () =>
+          import('./pages/ticket-detail/ticket-detail.component')
+            .then(m => m.TicketDetailComponent)
       },
       {
         path: 'ticket/:id',
