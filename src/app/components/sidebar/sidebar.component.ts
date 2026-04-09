@@ -90,7 +90,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   canManageUsers(): boolean {
     const currentUser = this.userService.getCurrentUser();
-    return currentUser ? this.userService.isSuperAdmin(currentUser.id) : false;
+    return currentUser ? ((currentUser.permissions || []).includes('permission.manage') || (currentUser.permissions || []).includes('system.admin')) : false;
   }
 
   joinGroup(groupId: string): void {

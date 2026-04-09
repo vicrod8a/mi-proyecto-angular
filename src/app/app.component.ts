@@ -32,25 +32,28 @@ export class AppComponent implements OnInit {
     console.log('[AppComponent] Loading available permissions from JSON...');
     this.permService.reloadAvailablePermissions();
 
-    // Then, set permissions based on current user
-    // (they will be filtered by available permissions)
-    setTimeout(() => {
+    // Then, set permissions based on current user (deterministic)
+    (async () => {
       let currentUser = this.userService.getCurrentUser();
-      
+
       // If no user is logged in, set the super admin as default
       if (!currentUser) {
         console.log('[AppComponent] No current user found, setting default user...');
-        this.userService.setCurrentUser('1');
+        await this.userService.setCurrentUser('1');
+        currentUser = this.userService.getCurrentUser();
+      } else {
+        // Ensure latest permissions are fetched for existing user
+        await this.userService.setCurrentUser(currentUser.id);
         currentUser = this.userService.getCurrentUser();
       }
-      
+
       if (currentUser) {
         this.permService.setPermissions(currentUser.permissions);
         console.log('[AppComponent] applied user perms', currentUser.permissions);
       } else {
         console.warn('[AppComponent] no current user found after default setup');
       }
-    }, 500);
+    })();
   }
 
   private updateSidebarVisibility() {
@@ -82,8 +85,8 @@ export class AppComponent implements OnInit {
   }
 
   // Switch user for demo
-  switchUser(userId: string) {
-    this.userService.setCurrentUser(userId);
+  async switchUser(userId: string) {
+    await this.userService.setCurrentUser(userId);
     const currentUser = this.userService.getCurrentUser();
     if (currentUser) {
       this.permService.setPermissions(currentUser.permissions);

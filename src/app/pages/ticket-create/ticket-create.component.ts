@@ -56,8 +56,8 @@ export class TicketCreateComponent implements OnInit {
       if (current) {
         // super admin sees everything, otherwise only groups they're in
         this.availableGroups = groups.filter(g =>
-          this.userService.isSuperAdmin(current.id) || current.groups.includes(g.id)
-        );
+            (current.permissions || []).includes('system.admin') || current.groups.includes(g.id)
+          );
       } else {
         this.availableGroups = [];
       }

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import UserApiClient from './user.api.client';
+import { PermissionService } from './permission.service';
 
 export interface User {
   id: string;
@@ -13,8 +14,8 @@ export interface User {
   isActive: boolean;
   createdDate: string;
   lastLogin?: string;
-  groups: string[]; // IDs de grupos a los que pertenece
-  password: string; // Added password field
+  groups: string[];
+  password: string;
   phone?: string;
   address?: string;
   birthDate?: string;
@@ -28,9 +29,7 @@ export interface Permission {
   category: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly STORAGE_KEY = 'mi-proyecto-users';
   private readonly CURRENT_USER_KEY = 'mi-proyecto-current-user';
@@ -44,7 +43,7 @@ export class UserService {
 
   private currentUserId: string = this.loadCurrentUserIdFromStorage() || '1';
 
-  constructor() {}
+  constructor(private permissionService?: PermissionService) {}
 
   private loadUsersFromStorage(): User[] {
     const stored = localStorage.getItem(this.STORAGE_KEY);
@@ -57,7 +56,6 @@ export class UserService {
         console.warn('[UserService] Error parsing stored users:', e);
       }
     }
-    // Return default users if nothing in storage
     return this.getDefaultUsers();
   }
 
@@ -93,7 +91,7 @@ export class UserService {
         firstName: 'Super',
         lastName: 'Admin',
         role: 'Super Administrator',
-        permissions: this.getAllPermissions().map(p => p.id),
+        permissions: this.getAllPermissions().map((p) => p.id),
         isActive: true,
         createdDate: '2024-01-01',
         lastLogin: '2024-12-09',
@@ -102,7 +100,7 @@ export class UserService {
         phone: '+34 912 345 678',
         address: 'Calle Principal 123, Madrid, España',
         birthDate: '1985-05-15',
-        avatar: 'https://i.pravatar.cc/150?img=1'
+        avatar: 'https://i.pravatar.cc/150?img=1',
       },
       {
         id: '2',
@@ -120,7 +118,7 @@ export class UserService {
         phone: '+34 678 901 234',
         address: 'Avenida Secundaria 45, Barcelona, España',
         birthDate: '1990-08-22',
-        avatar: 'https://i.pravatar.cc/150?img=2'
+        avatar: 'https://i.pravatar.cc/150?img=2',
       },
       {
         id: '3',
@@ -138,7 +136,7 @@ export class UserService {
         phone: '+34 645 789 012',
         address: 'Plaza Mayor 78, Valencia, España',
         birthDate: '1988-03-10',
-        avatar: 'https://i.pravatar.cc/150?img=3'
+        avatar: 'https://i.pravatar.cc/150?img=3',
       },
       {
         id: '4',
@@ -156,7 +154,7 @@ export class UserService {
         phone: '+34 612 345 678',
         address: 'Calle Secundaria 567, Sevilla, España',
         birthDate: '1992-11-30',
-        avatar: 'https://i.pravatar.cc/150?img=4'
+        avatar: 'https://i.pravatar.cc/150?img=4',
       },
       {
         id: '5',
@@ -174,36 +172,29 @@ export class UserService {
         phone: '+34 633 456 789',
         address: 'Calle del Diseño 456, Madrid, España',
         birthDate: '1993-07-17',
-        avatar: 'https://i.pravatar.cc/150?img=5'
-      }
+        avatar: 'https://i.pravatar.cc/150?img=5',
+      },
     ];
-  }  private getAllPermissions(): Permission[] {
+  }
+
+  private getAllPermissions(): Permission[] {
     return [
-      // Ticket permissions
       { id: 'ticket.create', name: 'Crear Tickets', description: 'Permite crear nuevos tickets', category: 'Tickets' },
       { id: 'ticket.read', name: 'Ver Tickets', description: 'Permite ver tickets existentes', category: 'Tickets' },
       { id: 'ticket.update', name: 'Editar Tickets', description: 'Permite editar tickets existentes', category: 'Tickets' },
       { id: 'ticket.delete', name: 'Eliminar Tickets', description: 'Permite eliminar tickets', category: 'Tickets' },
-
-      // Group permissions
       { id: 'group.create', name: 'Crear Grupos', description: 'Permite crear nuevos grupos', category: 'Grupos' },
       { id: 'group.read', name: 'Ver Grupos', description: 'Permite ver grupos existentes', category: 'Grupos' },
       { id: 'group.update', name: 'Editar Grupos', description: 'Permite editar grupos existentes', category: 'Grupos' },
       { id: 'group.delete', name: 'Eliminar Grupos', description: 'Permite eliminar grupos', category: 'Grupos' },
       { id: 'group.manage', name: 'Gestionar Grupos', description: 'Permite acceder al panel de gestión de grupos', category: 'Grupos' },
-
-      // User permissions
       { id: 'user.create', name: 'Crear Usuarios', description: 'Permite crear nuevos usuarios', category: 'Usuarios' },
       { id: 'user.read', name: 'Ver Usuarios', description: 'Permite ver usuarios existentes', category: 'Usuarios' },
       { id: 'user.update', name: 'Editar Usuarios', description: 'Permite editar usuarios existentes', category: 'Usuarios' },
       { id: 'user.delete', name: 'Eliminar Usuarios', description: 'Permite eliminar usuarios', category: 'Usuarios' },
-
-      // Permission management
       { id: 'permission.manage', name: 'Gestionar Permisos', description: 'Permite asignar y quitar permisos a usuarios', category: 'Permisos' },
-
-      // System permissions
       { id: 'system.admin', name: 'Administrador del Sistema', description: 'Acceso completo al sistema', category: 'Sistema' },
-      { id: 'report.read', name: 'Ver Reportes', description: 'Permite acceder a reportes del sistema', category: 'Reportes' }
+      { id: 'report.read', name: 'Ver Reportes', description: 'Permite acceder a reportes del sistema', category: 'Reportes' },
     ];
   }
 
@@ -216,61 +207,96 @@ export class UserService {
   }
 
   getUserById(id: string): User | null {
-    return this.usersSubject.value.find(user => user.id === id) || null;
+    return this.usersSubject.value.find((user) => user.id === id) || null;
   }
 
   getCurrentUser(): User | null {
-    // In a real app, this would come from authentication service
     return this.getUserById(this.currentUserId) || null;
   }
 
   async login(email: string, password: string): Promise<any> {
     console.log('Intentando login con user-service y Supabase fallback:', { email });
-    // Primero intentar el microservicio (auth endpoint)
     try {
       const resp = await this.api.login(email, password);
       const envelope = resp && resp.data ? resp.data : resp;
       const token = envelope?.token;
       const userPayload = envelope?.usuario || envelope?.user || envelope;
       if (token) {
-        try { localStorage.setItem(this.TOKEN_KEY, token); } catch {}
+        try {
+          localStorage.setItem(this.TOKEN_KEY, token);
+        } catch {}
       }
-      if (userPayload && userPayload.id) {
-        const userId = String(userPayload.id);
-        this.setCurrentUser(userId);
-        // merge into local users list
-        const others = this.usersSubject.value.filter(u => u.id !== userId);
-        const normalized: User = {
-          id: userId,
-          username: userPayload.name || userPayload.username || userPayload.email || '',
-          email: userPayload.email || '',
-          firstName: userPayload.firstName || userPayload.nombre_completo || '',
-          lastName: userPayload.lastName || '',
-          role: userPayload.role || userPayload.rol || '',
-          permissions: userPayload.permissions || [],
-          isActive: true,
-          createdDate: new Date().toISOString().split('T')[0],
-          lastLogin: undefined,
-          groups: userPayload.groupIds || [],
-          password: '',
-          phone: userPayload.phone || undefined,
-          address: userPayload.address || undefined,
-          birthDate: userPayload.birthdate || undefined,
-          avatar: userPayload.avatar || undefined,
-        };
-        const updated = [...others, normalized];
-        this.saveUsersToStorage(updated);
-        this.usersSubject.next(updated);
-        // After successful login, sync full users list from API
-        try { await this.syncUsers(); } catch (e) { /* ignore sync errors */ }
-        return { success: true, user: normalized, token };
-      }
-    } catch (e: any) {
-      console.warn('[UserService] API login failed, falling back to Supabase', e?.message || e);
-    }
 
-    // No fallback to direct Supabase from frontend for security reasons
-    return { success: false, message: 'Login falló: autenticación por API no disponible' };
+      let perms: string[] = userPayload.permissions || [];
+      try {
+        if (userPayload && userPayload.id) {
+          const userId = String(userPayload.id);
+          await this.setCurrentUser(userId);
+          const others = this.usersSubject.value.filter((u) => u.id !== userId);
+          try {
+            const permResp = await this.api.getPermissions(token);
+            const permEnvelope = permResp && permResp.data ? permResp.data : permResp;
+            if (Array.isArray(permEnvelope)) {
+              perms = (permEnvelope as any[])
+                .map((p) => {
+                  if (!p) return '';
+                  if (typeof p === 'string') return p;
+                  return p.nombre || p.name || p.permission || p.id || '';
+                })
+                .filter(Boolean);
+            }
+          } catch (e) {
+            // ignore permission fetch errors; fall back to payload
+          }
+
+          const normalized: User = {
+            id: userId,
+            username: userPayload.name || userPayload.username || userPayload.email || '',
+            email: userPayload.email || '',
+            firstName: userPayload.firstName || userPayload.nombre_completo || '',
+            lastName: userPayload.lastName || '',
+            role: userPayload.role || userPayload.rol || '',
+            permissions: perms || (userPayload.permissions || []),
+            isActive: true,
+            createdDate: new Date().toISOString().split('T')[0],
+            lastLogin: undefined,
+            groups: userPayload.groupIds || [],
+            password: '',
+            phone: userPayload.phone || undefined,
+            address: userPayload.address || undefined,
+            birthDate: userPayload.birthdate || undefined,
+            avatar: userPayload.avatar || undefined,
+          };
+
+          const updated = [...others, normalized];
+          this.saveUsersToStorage(updated);
+          this.usersSubject.next(updated);
+          try {
+            const permsToSet = perms || (userPayload.permissions || []);
+            if (this.permissionService) {
+              this.permissionService.setPermissions(permsToSet);
+            }
+          } catch (e) {
+            // non-fatal
+          }
+
+          try {
+            await this.syncUsers();
+          } catch (e) {
+            /* ignore sync errors */
+          }
+
+          return { success: true, user: normalized, token };
+        }
+      } catch (e: any) {
+        console.warn('[UserService] API login failed, falling back to Supabase', e?.message || e);
+      }
+
+      return { success: false, message: 'Login falló: autenticación por API no disponible' };
+    } catch (e: any) {
+      console.warn('[UserService] API login failed', e?.message || e);
+      return { success: false, message: e?.message || String(e) };
+    }
   }
 
   async register(payload: { username: string; email: string; password: string; fullName?: string; address?: string; phone?: string; birthdate?: string; }) {
@@ -286,7 +312,6 @@ export class UserService {
         last_name: lastName || '',
       });
       const envelope = resp && resp.data ? resp.data : resp;
-      // If registration returned id, treat as success
       if (envelope && (envelope.id || envelope.message)) {
         return { success: true, data: envelope };
       }
@@ -297,8 +322,9 @@ export class UserService {
   }
 
   logout(): void {
-    // Remove token and current user
-    try { localStorage.removeItem(this.TOKEN_KEY); } catch {}
+    try {
+      localStorage.removeItem(this.TOKEN_KEY);
+    } catch {}
     this.currentUserId = '';
     localStorage.removeItem(this.CURRENT_USER_KEY);
   }
@@ -334,18 +360,41 @@ export class UserService {
     }
   }
 
-  
-
-  setCurrentUser(userId: string): void {
+  async setCurrentUser(userId: string): Promise<void> {
     this.currentUserId = userId;
     this.saveCurrentUserIdToStorage(userId);
+    try {
+      const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+      console.log('[UserService] token present?', !!token);
+      if (!token) return;
+      const permResp = await this.api.getPermissionsFor(userId, token);
+      console.log('[UserService] raw permResp:', permResp);
+      const permEnvelope = permResp && permResp.data ? permResp.data : permResp;
+      let perms: string[] = [];
+      if (Array.isArray(permEnvelope)) {
+        if (permEnvelope.length && typeof permEnvelope[0] === 'string') {
+          perms = permEnvelope as string[];
+        } else {
+          perms = (permEnvelope as any[]).map((p) => p.nombre || p.name || p.permission || p.id || '').filter(Boolean);
+        }
+      }
+      console.log('[UserService] fetched permissions for user', userId, perms);
+      if (this.permissionService) {
+        this.permissionService.setPermissions(perms);
+      }
+      const users = this.usersSubject.value.map((u) => (u.id === userId ? { ...u, permissions: perms } : u));
+      this.saveUsersToStorage(users);
+      this.usersSubject.next(users);
+    } catch (e: any) {
+      console.warn('[UserService] fetching permissions failed', e?.message || e, e?.body || null);
+    }
   }
 
   createUser(user: Omit<User, 'id' | 'createdDate'>): void {
     const newUser: User = {
       ...user,
       id: this.generateId(),
-      createdDate: new Date().toISOString().split('T')[0]
+      createdDate: new Date().toISOString().split('T')[0],
     };
     const currentUsers = this.usersSubject.value;
     const updated = [...currentUsers, newUser];
@@ -355,7 +404,7 @@ export class UserService {
 
   updateUser(id: string, userData: Partial<User>): void {
     const currentUsers = this.usersSubject.value;
-    const userIndex = currentUsers.findIndex(user => user.id === id);
+    const userIndex = currentUsers.findIndex((user) => user.id === id);
     if (userIndex > -1) {
       currentUsers[userIndex] = { ...currentUsers[userIndex], ...userData };
       this.saveUsersToStorage(currentUsers);
@@ -364,7 +413,7 @@ export class UserService {
   }
 
   deleteUser(id: string): void {
-    const currentUsers = this.usersSubject.value.filter(user => user.id !== id);
+    const currentUsers = this.usersSubject.value.filter((user) => user.id !== id);
     this.saveUsersToStorage(currentUsers);
     this.usersSubject.next(currentUsers);
   }
@@ -372,18 +421,14 @@ export class UserService {
   addPermissionToUser(userId: string, permissionId: string): void {
     const user = this.getUserById(userId);
     if (user && !user.permissions.includes(permissionId)) {
-      this.updateUser(userId, {
-        permissions: [...user.permissions, permissionId]
-      });
+      this.updateUser(userId, { permissions: [...user.permissions, permissionId] });
     }
   }
 
   removePermissionFromUser(userId: string, permissionId: string): void {
     const user = this.getUserById(userId);
     if (user) {
-      this.updateUser(userId, {
-        permissions: user.permissions.filter(p => p !== permissionId)
-      });
+      this.updateUser(userId, { permissions: user.permissions.filter((p) => p !== permissionId) });
     }
   }
 
@@ -394,13 +439,11 @@ export class UserService {
 
   isSuperAdmin(userId: string): boolean {
     const user = this.getUserById(userId);
-    return user ? user.username === 'superAdmin' : false;
+    if (!user) return false;
+    const perms = user.permissions || [];
+    return perms.includes('system.admin') || user.username === 'superAdmin';
   }
 
-  /**
-   * Comprueba si el usuario actual pertenece a un grupo dado.
-   * Un superAdmin siempre se considera miembro.
-   */
   isMemberOfGroup(groupId: string): boolean {
     const current = this.getCurrentUser();
     if (!current) return false;
@@ -423,3 +466,5 @@ export class UserService {
     }, {} as { [category: string]: Permission[] });
   }
 }
+
+

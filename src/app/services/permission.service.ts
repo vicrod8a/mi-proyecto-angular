@@ -70,10 +70,31 @@ export class PermissionService {
       this.pendingPermissions = perms;
       return;
     }
+    // Accept perms as strings or objects ({ name, nombre, permission, id })
+    const asStrings = (perms || []).map((p: any) => {
+      if (!p) return '';
+      if (typeof p === 'string') return p;
+      return p.nombre || p.name || p.permission || p.id || '';
+    }).filter(Boolean) as string[];
 
+    // Normalize incoming permission names (server may return different separators or synonyms)
+    const normalize = (p: string) => {
+      if (!p) return p;
+      let s = String(p).replace(/:/g, '.');
+      // common synonym mappings
+      const synonyms: Record<string, string> = {
+        'ticket.edit': 'ticket.update',
+        'ticket.view': 'ticket.read',
+        'user.manage': 'permission.manage'
+      };
+      if (synonyms[s]) s = synonyms[s];
+      return s;
+    };
+
+    const normalized = asStrings.map(normalize).filter(Boolean);
     // Filter user permissions to only those that are available in the JSON
-    const filtered = perms.filter(p => available.includes(p));
-    console.log('[PermissionService] Setting permissions. Input:', perms, 'Filtered:', filtered);
+    const filtered = normalized.filter(p => available.includes(p));
+    console.log('[PermissionService] Setting permissions. Input:', perms, 'AsStrings:', asStrings, 'Normalized:', normalized, 'Filtered:', filtered);
     this._permissions.set(filtered);
   }
 

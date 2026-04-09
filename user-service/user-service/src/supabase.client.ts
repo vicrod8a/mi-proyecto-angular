@@ -8,3 +8,8 @@ if (!SUPABASE_KEY) {
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+
+
+

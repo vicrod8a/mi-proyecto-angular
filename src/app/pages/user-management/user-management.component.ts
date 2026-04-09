@@ -240,7 +240,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   isSuperAdmin(user: User): boolean {
-    return this.userService.isSuperAdmin(user.id);
+    return user.permissions ? user.permissions.includes('system.admin') : false;
   }
 
   togglePermission(permissionId: string) {
@@ -279,12 +279,12 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   get adminUsers(): number {
-    return this.users.filter(u => u.role === 'Super Administrator').length;
+    return this.users.filter(u => (u.permissions || []).includes('system.admin')).length;
   }
 
   canManageUsers(): boolean {
     const currentUser = this.userService.getCurrentUser();
-    return currentUser ? this.userService.isSuperAdmin(currentUser.id) : false;
+    return currentUser ? ((currentUser.permissions || []).includes('permission.manage') || (currentUser.permissions || []).includes('system.admin')) : false;
   }
 
   objectKeys(obj: any): string[] {

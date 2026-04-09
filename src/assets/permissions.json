@@ -23,6 +23,6 @@
     "report.read"
   ],
   "system": [
-
+    "system.admin"
   ]
 }

@@ -84,7 +84,7 @@
               <div>
                 <div class="font-medium text-gray-900">{{ user.firstName }} {{ user.lastName }}</div>
                 <div class="text-sm text-gray-500">@{{ user.username }}</div>
-                <div *ngIf="isSuperAdmin(user)" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">
+                <div *ngIf="(user.permissions || []).includes('system.admin')" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">
                   <i class="pi pi-star mr-1"></i>
                   Super Admin
                 </div>
@@ -94,7 +94,7 @@
           <td class="text-gray-700">{{ user.email }}</td>
           <td>
             <span [ngClass]="{
-              'role-badge-admin': user.role === 'Super Administrator',
+              'role-badge-admin': (user.permissions || []).includes('system.admin'),
               'role-badge-manager': user.role === 'Project Manager',
               'role-badge-developer': user.role === 'Developer',
               'role-badge-qa': user.role === 'QA Engineer'
@@ -152,7 +152,7 @@
                 *ifHasPermission="'user.delete'">
               </button>
             </div>
-            <span *ngIf="isSuperAdmin(user)" class="text-sm text-gray-500 italic">Super Admin</span>
+            <span *ngIf="(user.permissions || []).includes('system.admin')" class="text-sm text-gray-500 italic">Super Admin</span>
           </td>
         </tr>
       </ng-template>

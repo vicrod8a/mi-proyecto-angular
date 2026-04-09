@@ -54,6 +54,11 @@ export class UserApiClient {
     return this.request('/users/permissions', { method: 'GET', headers: token ? { Authorization: `Bearer ${token}` } : {} });
   }
 
+  async getPermissionsFor(userId: string, token?: string) {
+    const path = `/users/${userId}/permissions`;
+    return this.request(path, { method: 'GET', headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  }
+
   async createUser(payload: any, token?: string) {
     return this.request('/users', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: JSON.stringify(payload) });
   }

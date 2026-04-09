@@ -173,7 +173,55 @@ export class GroupService {
     return this.groupsSubject.value.find(group => group.id === id);
   }
 
-  createGroup(group: Omit<Group, 'id' | 'isMember' | 'memberCount' | 'createdDate' | 'invitationCode' | 'membersList'>): void {
+  async createGroup(group: Omit<Group, 'id' | 'isMember' | 'memberCount' | 'createdDate' | 'invitationCode' | 'membersList'>): Promise<void> {
+    // Try to create on server first; fall back to local-only behavior if network fails
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    const payload = { name: group.name, description: group.description };
+
+    try {
+      if (token) {
+        const res = await fetch('http://127.0.0.1:3002/groups', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const body = await res.json();
+          const created = body?.data;
+          if (created) {
+            const newGroup: Group = {
+              id: String(created.id),
+              name: created.name,
+              description: created.description,
+              memberCount: created.member_count ?? 0,
+              isMember: false,
+              createdDate: created.created_at ? created.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+              invitationCode: created.invitation_code ?? this.generateInvitationCode(),
+              membersList: created.members_list ?? []
+            } as Group;
+            const currentGroups = this.groupsSubject.value;
+            const updated = [...currentGroups, newGroup];
+            this.saveGroupsToStorage(updated);
+            this.groupsSubject.next(updated);
+            return;
+          }
+        } else if (res.status === 409) {
+          console.warn('[GroupService] Group name already exists');
+          throw new Error('Group name already exists');
+        } else {
+          console.warn('[GroupService] Server returned', res.status);
+          // fall through to local fallback
+        }
+      }
+    } catch (e) {
+      console.warn('[GroupService] Server create failed, falling back to local-only:', e);
+    }
+
+    // Local-only fallback
     const newGroup: Group = {
       ...group,
       id: this.generateId(),

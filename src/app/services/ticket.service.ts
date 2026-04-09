@@ -334,7 +334,7 @@ export class TicketService {
       return false;
     }
     // super admin always allowed
-    if (this.userService.isSuperAdmin(current.id)) {
+    if ((current.permissions || []).includes('system.admin')) {
       return true;
     }
     // check creator matches username or firstName (backwards compatibility)
@@ -351,7 +351,7 @@ export class TicketService {
       return false;
     }
     // super admin always allowed
-    if (this.userService.isSuperAdmin(current.id)) {
+    if ((current.permissions || []).includes('system.admin')) {
       return true;
     }
     // check creator matches username or firstName (backwards compatibility)
