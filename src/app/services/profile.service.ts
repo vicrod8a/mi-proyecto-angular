@@ -76,13 +76,18 @@ export class ProfileService {
       address: userProfile.address,
       birthDate: userProfile.birthDate
     };
-    
-    this.userService.updateUser(userProfile.id, updateData);
-    
-    const updatedUser = this.userService.getUserById(userProfile.id);
-    if (updatedUser) {
-      this.updateUserSubject(updatedUser);
-    }
+    // Try to persist to backend; fallback to local update if not possible
+    (async () => {
+      const ok = await this.userService.persistUserUpdate(userProfile.id!, updateData as any);
+      if (!ok) {
+        // fallback local
+        this.userService.updateUser(userProfile.id!, updateData);
+      }
+      const updatedUser = this.userService.getUserById(userProfile.id!);
+      if (updatedUser) {
+        this.updateUserSubject(updatedUser);
+      }
+    })();
   }
 
   deleteUser(): void {

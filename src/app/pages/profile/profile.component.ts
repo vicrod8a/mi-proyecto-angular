@@ -33,6 +33,7 @@ export class ProfileComponent implements OnInit {
   isEditing = false;
   user: UserProfile | null = null;
   editingUser: UserProfile | null = null;
+  editingFullName: string = '';
   assignedTickets: Ticket[] = [];
   ticketSummary = {
     pendiente: 0,
@@ -107,15 +108,20 @@ export class ProfileComponent implements OnInit {
       this.isEditing = false;
     } else {
       this.editingUser = this.user ? { ...this.user } : null;
+      this.editingFullName = this.user ? `${this.user.firstName} ${this.user.lastName}`.trim() : '';
       this.isEditing = true;
     }
   }
 
   saveProfile() {
     if (!this.editingUser) return;
-    
+    // Set full name into first/last
+    const parts = (this.editingFullName || '').trim().split(/\s+/);
+    this.editingUser.firstName = parts.shift() || '';
+    this.editingUser.lastName = parts.join(' ') || '';
+
     // Validar campos obligatorios
-    if (!this.editingUser.username || !this.editingUser.firstName || !this.editingUser.lastName || !this.editingUser.email || !this.editingUser.phone || !this.editingUser.address || !this.editingUser.birthDate) {
+    if (!this.editingUser.username || !this.editingUser.firstName || !this.editingUser.email || !this.editingUser.phone || !this.editingUser.address || !this.editingUser.birthDate) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campos inválidos',
@@ -125,6 +131,7 @@ export class ProfileComponent implements OnInit {
       return;
     }
 
+    // Persist via profile service (which updates userService/local + will call backend if available)
     this.profileService.updateUser(this.editingUser);
     this.user = { ...this.editingUser };
     this.isEditing = false;

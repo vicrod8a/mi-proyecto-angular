@@ -360,6 +360,27 @@ export class UserService {
     }
   }
 
+  /**
+   * Set permissions for a user on the backend and update local store.
+   */
+  async setPermissionsForUser(userId: string, permissions: string[]): Promise<boolean> {
+    const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+    try {
+      if (!token) throw new Error('No token');
+      await this.api.setPermissions(userId, permissions, token);
+      // After successful backend update, re-sync users from server to ensure canonical state
+      try {
+        await this.syncUsers();
+      } catch (e) {
+        console.warn('[UserService] syncUsers after setPermissions failed', e);
+      }
+      return true;
+    } catch (e) {
+      console.warn('[UserService] setPermissionsForUser failed', e);
+      return false;
+    }
+  }
+
   async setCurrentUser(userId: string): Promise<void> {
     this.currentUserId = userId;
     this.saveCurrentUserIdToStorage(userId);
@@ -390,7 +411,8 @@ export class UserService {
     }
   }
 
-  createUser(user: Omit<User, 'id' | 'createdDate'>): void {
+  async createUser(user: Omit<User, 'id' | 'createdDate'>): Promise<void> {
+    // optimistic local add
     const newUser: User = {
       ...user,
       id: this.generateId(),
@@ -400,6 +422,47 @@ export class UserService {
     const updated = [...currentUsers, newUser];
     this.saveUsersToStorage(updated);
     this.usersSubject.next(updated);
+
+    // attempt to persist to backend if token present
+    const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+    if (!token) return;
+
+    try {
+      const payload: any = {
+        username: user.username,
+        email: user.email,
+        first_name: (user.firstName || '').split(' ')[0] || undefined,
+        last_name: user.lastName || undefined,
+        address: user.address,
+        phone: user.phone,
+        birthdate: user.birthDate,
+        role: user.role,
+        is_active: user.isActive,
+        password: user.password || undefined
+      };
+
+      const resp = await this.api.createUser(payload, token);
+      const envelope = resp && resp.data ? resp.data : resp;
+      if (envelope && envelope.id) {
+        // replace optimistic user with server user
+        const merged = this.usersSubject.value.map(u => u.id === newUser.id ? {
+          ...u,
+          id: String(envelope.id),
+          username: envelope.username || u.username,
+          email: envelope.email || u.email,
+          firstName: envelope.first_name || u.firstName,
+          lastName: envelope.last_name || u.lastName,
+          phone: envelope.phone || u.phone,
+          address: envelope.address || u.address,
+          birthDate: envelope.birthdate || u.birthDate,
+          createdDate: envelope.created_at ? envelope.created_at.split('T')[0] : u.createdDate
+        } : u);
+        this.saveUsersToStorage(merged);
+        this.usersSubject.next(merged);
+      }
+    } catch (e) {
+      console.warn('[UserService] createUser persist failed', e);
+    }
   }
 
   updateUser(id: string, userData: Partial<User>): void {
@@ -412,10 +475,68 @@ export class UserService {
     }
   }
 
-  deleteUser(id: string): void {
+  /**
+   * Persist user update to backend when token is present, otherwise update local only.
+   */
+  async persistUserUpdate(id: string, userData: Partial<User>): Promise<boolean> {
+    const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+    if (!token) {
+      this.updateUser(id, userData);
+      return true;
+    }
+
+    try {
+      const payload: any = {};
+      if (userData.username) payload.username = userData.username;
+      if (userData.email) payload.email = userData.email;
+      if (userData.firstName) payload.first_name = userData.firstName;
+      if (userData.lastName) payload.last_name = userData.lastName;
+      if (userData.phone) payload.phone = userData.phone;
+      if (userData.address) payload.address = userData.address;
+      if (userData.birthDate) payload.birthdate = userData.birthDate;
+      if ((userData as any).password) payload.password = (userData as any).password;
+
+      const resp = await this.api.updateUser(id, payload, token);
+      const envelope = resp && resp.data ? resp.data : resp;
+
+      // Merge returned fields into local user
+      const users = this.usersSubject.value.map((u) => {
+        if (u.id !== id) return u;
+        return {
+          ...u,
+          username: envelope?.username || userData.username || u.username,
+          email: envelope?.email || userData.email || u.email,
+          firstName: envelope?.first_name || userData.firstName || u.firstName,
+          lastName: envelope?.last_name || userData.lastName || u.lastName,
+          phone: envelope?.phone || userData.phone || u.phone,
+          address: envelope?.address || userData.address || u.address,
+          birthDate: envelope?.birthdate || userData.birthDate || u.birthDate,
+        } as User;
+      });
+
+      this.saveUsersToStorage(users);
+      this.usersSubject.next(users);
+      return true;
+    } catch (e) {
+      console.warn('[UserService] persistUserUpdate failed', e);
+      return false;
+    }
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    // optimistic local delete
     const currentUsers = this.usersSubject.value.filter((user) => user.id !== id);
     this.saveUsersToStorage(currentUsers);
     this.usersSubject.next(currentUsers);
+
+    const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+    if (!token) return;
+
+    try {
+      await this.api.deleteUser(id, token);
+    } catch (e) {
+      console.warn('[UserService] deleteUser persist failed', e);
+    }
   }
 
   addPermissionToUser(userId: string, permissionId: string): void {

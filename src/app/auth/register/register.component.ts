@@ -28,6 +28,7 @@ import { UserService } from '../../services/user.service';
 export class RegisterComponent {
 
   registerForm: FormGroup;
+  showPassword = false;
 
   constructor(
     private fb: FormBuilder,

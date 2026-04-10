@@ -7,8 +7,16 @@ const bcrypt = require('bcryptjs');
 const fastify = Fastify({ logger: true });
 
 // Register plugins (no top-level await for compatibility with ts-node)
-fastify.register(cors, { origin: '*' });
+fastify.register(cors, {
+  origin: '*',
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  // '@fastify/cors' handles preflight automatically; keep explicit OPTIONS handler below
+  preflight: true,
+});
 fastify.register(jwt, { secret: 'supersecret' });
+
+
 
 // Health check
 fastify.get('/health', async (request, reply) => {
@@ -150,13 +158,55 @@ fastify.get('/users', async (request, reply) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, username, email, first_name, last_name, role, is_active')
+      .select('id, username, email, first_name, last_name, role, is_active, created_at')
       .order('created_at', { ascending: false });
     if (error) {
       fastify.log.error({ err: error }, 'Supabase select users error');
       return reply.status(500).send({ success: false, message: 'Error fetching users' });
     }
-    return reply.send(data || []);
+
+    const users = (data || []);
+    const userIds = users.map((u: any) => u.id).filter(Boolean);
+
+    // Fetch permissions for all returned users in one query
+    let permsMap: Record<number, string[]> = {};
+    if (userIds.length) {
+      const { data: upData, error: upErr } = await supabase
+        .from('user_permissions')
+        .select('user_id, permissions(name)')
+        .in('user_id', userIds);
+      if (upErr) {
+        fastify.log.error({ err: upErr }, 'Supabase select user_permissions bulk error');
+        // don't fail the whole request; return users without perms
+      } else {
+            for (const r of (upData || [])) {
+              const uid = Number(r.user_id);
+              const perm: any = r.permissions;
+              let name: string | null = null;
+              if (perm) {
+                if (Array.isArray(perm)) name = perm[0]?.name || null;
+                else name = (perm as any).name || null;
+              }
+              if (!name) continue;
+              if (!permsMap[uid]) permsMap[uid] = [];
+              permsMap[uid].push(name);
+            }
+      }
+    }
+
+    const enriched = users.map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      role: u.role,
+      is_active: u.is_active,
+      created_at: u.created_at,
+      permissions: permsMap[Number(u.id)] || []
+    }));
+
+    return reply.send(enriched);
   } catch (e: any) {
     fastify.log.error({ err: e }, 'GET /users error');
     return reply.status(500).send({ success: false, message: 'Internal error' });
@@ -247,7 +297,12 @@ fastify.get('/users/:id/permissions', async (request: any, reply: any) => {
         fastify.log.error({ err: reqErr }, 'Supabase select requester permissions error');
         return reply.status(500).send({ success: false, message: 'Error checking permissions' });
       }
-      const names = (reqPerms || []).map((r: any) => (r.permissions && r.permissions.name) || null).filter(Boolean);
+      const names = (reqPerms || []).map((r: any) => {
+        const perm: any = r.permissions;
+        if (!perm) return null;
+        if (Array.isArray(perm)) return perm[0]?.name || null;
+        return (perm as any).name || null;
+      }).filter(Boolean as any);
       if (!names.includes('permission.manage') && !names.includes('system.admin')) {
         return reply.status(403).send({ success: false, message: 'Forbidden' });
       }
@@ -262,7 +317,12 @@ fastify.get('/users/:id/permissions', async (request: any, reply: any) => {
       fastify.log.error({ err: error }, 'Supabase select user_permissions by id error');
       return reply.status(500).send({ success: false, message: 'Error fetching permissions' });
     }
-    const names = (data || []).map((r: any) => (r.permissions && r.permissions.name) || null).filter(Boolean);
+    const names = (data || []).map((r: any) => {
+      const perm: any = r.permissions;
+      if (!perm) return null;
+      if (Array.isArray(perm)) return perm[0]?.name || null;
+      return (perm as any).name || null;
+    }).filter(Boolean as any);
     return reply.send(names);
   } catch (e: any) {
     fastify.log.error({ err: e }, 'GET /users/:id/permissions error');
@@ -275,7 +335,9 @@ fastify.put('/users/:id/permissions', async (request: any, reply: any) => {
   const requesterId = await verifyAndGetUserId(request, reply);
   if (!requesterId) return;
   const targetId = Number(request.params.id);
-  const perms: string[] = request.body && request.body.permissions ? request.body.permissions : [];
+  const perms: any[] = request.body && request.body.permissions ? request.body.permissions : [];
+
+  fastify.log.info({ requesterId, targetId, incoming: perms }, 'PUT /users/:id/permissions called');
 
   try {
     // if requester is not the same user, require permission.manage
@@ -288,25 +350,72 @@ fastify.put('/users/:id/permissions', async (request: any, reply: any) => {
         fastify.log.error({ err: reqErr }, 'Supabase select requester permissions error');
         return reply.status(500).send({ success: false, message: 'Error checking permissions' });
       }
-      const names = (reqPerms || []).map((r: any) => (r.permissions && r.permissions.name) || null).filter(Boolean);
+      const names = (reqPerms || []).map((r: any) => {
+        const perm: any = r.permissions;
+        if (!perm) return null;
+        if (Array.isArray(perm)) return perm[0]?.name || null;
+        return (perm as any).name || null;
+      }).filter(Boolean as any);
       if (!names.includes('permission.manage') && !names.includes('system.admin')) {
         return reply.status(403).send({ success: false, message: 'Forbidden' });
       }
     }
 
-    // Map permission names to ids
-    const { data: permsData, error: permsErr } = await supabase
-      .from('permissions')
-      .select('id, name')
-      .in('name', perms);
-    if (permsErr) {
-      fastify.log.error({ err: permsErr }, 'Supabase select permissions error');
-      return reply.status(500).send({ success: false, message: 'Error resolving permissions' });
+    // Normalize incoming perms: accept array of strings (names), numbers (ids) or objects { id, name }
+    const incoming = Array.isArray(perms) ? perms : [];
+    const nameCandidates: string[] = [];
+    const idCandidates: number[] = [];
+    for (const p of incoming) {
+      if (p === null || p === undefined) continue;
+      if (typeof p === 'string') nameCandidates.push(p);
+      else if (typeof p === 'number') idCandidates.push(p);
+      else if (typeof p === 'object') {
+        if (p.name) nameCandidates.push(String(p.name));
+        else if (p.id) idCandidates.push(Number(p.id));
+      }
     }
 
-    const toInsert = (permsData || []).map((p: any) => ({ user_id: targetId, permission_id: p.id }));
+    // Resolve permission rows by name and/or id
+    let permsData: any[] = [];
+    if (nameCandidates.length) {
+      const { data: byName, error: errName } = await supabase
+        .from('permissions')
+        .select('id, name')
+        .in('name', nameCandidates);
+      if (errName) {
+        fastify.log.error({ err: errName }, 'Supabase select permissions by name error');
+        return reply.status(500).send({ success: false, message: 'Error resolving permissions by name' });
+      }
+      permsData = permsData.concat(byName || []);
+    }
+    if (idCandidates.length) {
+      const { data: byId, error: errId } = await supabase
+        .from('permissions')
+        .select('id, name')
+        .in('id', idCandidates);
+      if (errId) {
+        fastify.log.error({ err: errId }, 'Supabase select permissions by id error');
+        return reply.status(500).send({ success: false, message: 'Error resolving permissions by id' });
+      }
+      permsData = permsData.concat(byId || []);
+    }
 
-    // Delete existing and insert new
+    // If caller requested non-empty list but nothing resolved, don't delete existing permissions
+    if (incoming.length > 0 && permsData.length === 0) {
+      fastify.log.warn({ incoming }, 'No permissions resolved from request payload');
+      return reply.status(400).send({ success: false, message: 'No matching permissions found for provided payload' });
+    }
+
+    // Deduplicate resolved permission ids
+    const uniquePermsById = new Map<number, any>();
+    for (const p of permsData) {
+      uniquePermsById.set(Number(p.id), p);
+    }
+
+    const toInsert = Array.from(uniquePermsById.keys()).map((pid) => ({ user_id: targetId, permission_id: pid }));
+
+    // Delete existing and insert new (if any)
+    fastify.log.info({ targetId, toInsertCount: toInsert.length }, 'About to replace permissions for user');
     const { data: delData, error: delErr } = await supabase.from('user_permissions').delete().eq('user_id', targetId);
     if (delErr) {
       fastify.log.error({ err: delErr }, 'Supabase delete user_permissions error');
@@ -319,11 +428,178 @@ fastify.put('/users/:id/permissions', async (request: any, reply: any) => {
         fastify.log.error({ err: insErr }, 'Supabase insert user_permissions error');
         return reply.status(500).send({ success: false, message: 'Error inserting permissions' });
       }
+      const insDataAny: any = insData;
+      const insertedCount = insDataAny && Array.isArray(insDataAny) ? insDataAny.length : 0;
+      fastify.log.info({ inserted: insertedCount }, 'Inserted user_permissions rows');
     }
 
     return reply.send({ success: true, message: 'Permissions updated' });
   } catch (e: any) {
     fastify.log.error({ err: e }, 'PUT /users/:id/permissions error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// PUT /users/:id - update user profile (self or requires permission.manage/system.admin)
+fastify.put('/users/:id', async (request: any, reply: any) => {
+  const requesterId = await verifyAndGetUserId(request, reply);
+  if (!requesterId) return;
+  const targetId = Number(request.params.id);
+  const body = request.body || {};
+
+  try {
+    // if requester is not the same user, require permission.manage or system.admin
+    if (requesterId !== targetId) {
+      const { data: reqPerms, error: reqErr } = await supabase
+        .from('user_permissions')
+        .select('permission_id, permissions(name)')
+        .eq('user_id', requesterId);
+      if (reqErr) {
+        fastify.log.error({ err: reqErr }, 'Supabase select requester permissions error');
+        return reply.status(500).send({ success: false, message: 'Error checking permissions' });
+      }
+    const names = (reqPerms || []).map((r: any) => {
+      const perm = r.permissions;
+      if (!perm) return null;
+      if (Array.isArray(perm)) return perm[0]?.name || null;
+      return perm.name || null;
+    }).filter(Boolean as any);
+      if (!names.includes('permission.manage') && !names.includes('system.admin')) {
+        return reply.status(403).send({ success: false, message: 'Forbidden' });
+      }
+    }
+
+    const update: any = {};
+    if (body.username) update.username = body.username;
+    if (body.email) update.email = body.email;
+    if (body.first_name) update.first_name = body.first_name;
+    if (body.last_name) update.last_name = body.last_name;
+    if (body.address) update.address = body.address;
+    if (body.phone) update.phone = body.phone;
+    if (body.birthdate) update.birthdate = body.birthdate;
+
+    if (body.password) {
+      const hashed = await bcrypt.hash(body.password, 10);
+      update.password_hash = hashed;
+    }
+
+    if (Object.keys(update).length === 0) {
+      return reply.status(400).send({ success: false, message: 'No data to update' });
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(update)
+      .eq('id', targetId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      fastify.log.error({ err: error }, 'Supabase update user error');
+      return reply.status(500).send({ success: false, message: 'Error updating user' });
+    }
+
+    return reply.send(data || null);
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'PUT /users/:id error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// POST /users - create a new user (requires permission.manage or system.admin)
+fastify.post('/users', async (request: any, reply: any) => {
+  const requesterId = await verifyAndGetUserId(request, reply);
+  if (!requesterId) return;
+  const body = request.body || {};
+
+  try {
+    // Check permissions for requester
+    const { data: reqPerms, error: reqErr } = await supabase
+      .from('user_permissions')
+      .select('permission_id, permissions(name)')
+      .eq('user_id', requesterId);
+    if (reqErr) {
+      fastify.log.error({ err: reqErr }, 'Supabase select requester permissions error');
+      return reply.status(500).send({ success: false, message: 'Error checking permissions' });
+    }
+    const names = (reqPerms || []).map((r: any) => {
+      const perm = r.permissions;
+      if (!perm) return null;
+      if (Array.isArray(perm)) return perm[0]?.name || null;
+      return perm.name || null;
+    }).filter(Boolean as any);
+    if (!names.includes('permission.manage') && !names.includes('system.admin')) {
+      return reply.status(403).send({ success: false, message: 'Forbidden' });
+    }
+
+    const [first_name, ...rest] = (body.first_name || body.fullName || '').split(' ');
+    const last_name = rest.join(' ') || null;
+    const password = body.password || Math.random().toString(36).slice(-8);
+    const hash = await bcrypt.hash(password, 10);
+
+    const insertObj: any = {
+      username: body.username,
+      email: body.email,
+      first_name: first_name || null,
+      last_name: last_name,
+      address: body.address || null,
+      phone: body.phone || null,
+      birthdate: body.birthdate || null,
+      password_hash: hash,
+      role: body.role || 'user',
+      is_active: typeof body.is_active === 'boolean' ? body.is_active : true
+    };
+
+    const { data, error } = await supabase.from('users').insert(insertObj).select().maybeSingle();
+    if (error) {
+      fastify.log.error({ err: error }, 'Supabase insert user error');
+      return reply.status(500).send({ success: false, message: 'Error creating user' });
+    }
+
+    return reply.status(201).send(data || null);
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'POST /users error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// DELETE /users/:id - delete a user (requires permission.manage or system.admin)
+fastify.delete('/users/:id', async (request: any, reply: any) => {
+  const requesterId = await verifyAndGetUserId(request, reply);
+  if (!requesterId) return;
+  const targetId = Number(request.params.id);
+
+  try {
+    // Check permissions for requester
+    const { data: reqPerms, error: reqErr } = await supabase
+      .from('user_permissions')
+      .select('permission_id, permissions(name)')
+      .eq('user_id', requesterId);
+    if (reqErr) {
+      fastify.log.error({ err: reqErr }, 'Supabase select requester permissions error');
+      return reply.status(500).send({ success: false, message: 'Error checking permissions' });
+    }
+    const names = (reqPerms || []).map((r: any) => (r.permissions && r.permissions.name) || null).filter(Boolean);
+    if (!names.includes('permission.manage') && !names.includes('system.admin')) {
+      return reply.status(403).send({ success: false, message: 'Forbidden' });
+    }
+
+    // delete user_permissions first
+    const { error: delPermErr } = await supabase.from('user_permissions').delete().eq('user_id', targetId);
+    if (delPermErr) {
+      fastify.log.error({ err: delPermErr }, 'Supabase delete user_permissions error');
+      return reply.status(500).send({ success: false, message: 'Error deleting user permissions' });
+    }
+
+    const { data, error } = await supabase.from('users').delete().eq('id', targetId).select().maybeSingle();
+    if (error) {
+      fastify.log.error({ err: error }, 'Supabase delete user error');
+      return reply.status(500).send({ success: false, message: 'Error deleting user' });
+    }
+
+    return reply.send({ success: true, data: data || null });
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'DELETE /users/:id error');
     return reply.status(500).send({ success: false, message: 'Internal error' });
   }
 });

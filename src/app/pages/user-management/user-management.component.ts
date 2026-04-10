@@ -88,8 +88,14 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     // Cleanup if needed
   }
 
-  loadUsers() {
-    this.userService.getUsers().subscribe(users => {
+  async loadUsers() {
+    // Try to sync from backend first
+    try {
+      await this.userService.syncUsers();
+    } catch (e) {
+      // ignore
+    }
+    this.userService.getUsers().subscribe((users) => {
       this.users = users;
     });
   }
@@ -145,6 +151,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
     const userData = this.userForm.value;
 
+    // Validate unique username when creating
+    if (!this.isEditing) {
+      const exists = this.users.find((u) => u.username === userData.username);
+      if (exists) {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'El nombre de usuario ya existe' });
+        return;
+      }
+    }
+
     if (this.isEditing && this.selectedUser) {
       this.userService.updateUser(this.selectedUser.id, userData);
       this.messageService.add({
@@ -189,30 +204,24 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   savePermissions() {
     if (!this.selectedUser) return;
 
-    // Remove all current permissions
-    this.selectedUser.permissions.forEach(permissionId => {
-      this.userService.removePermissionFromUser(this.selectedUser!.id, permissionId);
-    });
+    // Persist selected permissions to backend via UserService
+    (async () => {
+      const ok = await this.userService.setPermissionsForUser(this.selectedUser!.id, this.selectedPermissions);
+      if (ok) {
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Permisos actualizados correctamente' });
+      } else {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar permisos' });
+      }
 
-    // Add selected permissions
-    this.selectedPermissions.forEach(permissionId => {
-      this.userService.addPermissionToUser(this.selectedUser!.id, permissionId);
-    });
+      this.showPermissionsDialog = false;
+      this.loadUsers(); // Refresh the list
 
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Éxito',
-      detail: 'Permisos actualizados correctamente'
-    });
-
-    this.showPermissionsDialog = false;
-    this.loadUsers(); // Refresh the list
-
-    // If the current logged-in user had their permissions changed, reapply them.
-    const currentUser = this.userService.getCurrentUser();
-    if (currentUser && this.selectedUser && currentUser.id === this.selectedUser.id) {
-      this.permissionService.setPermissions(this.selectedPermissions);
-    }
+      // If the current logged-in user had their permissions changed, reapply them.
+      const currentUser = this.userService.getCurrentUser();
+      if (currentUser && this.selectedUser && currentUser.id === this.selectedUser.id) {
+        this.permissionService.setPermissions(this.selectedPermissions);
+      }
+    })();
   }
 
   closeUserDialog() {
@@ -230,6 +239,21 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       const permission = this.permissions.find(p => p.id === id);
       return permission ? permission.name : id;
     }).join(', ');
+  }
+
+  getPermissionBadges(permissionIds: string[] | undefined, limit = 3): string[] {
+    if (!permissionIds || permissionIds.length === 0) return [];
+    return (permissionIds || [])
+      .slice(0, limit)
+      .map(id => {
+        const permission = this.permissions.find(p => p.id === id);
+        return permission ? permission.name : id;
+      });
+  }
+
+  getRemainingPermissionsCount(permissionIds: string[] | undefined, limit = 3): number {
+    if (!permissionIds) return 0;
+    return Math.max(0, permissionIds.length - limit);
   }
 
   getGroupNames(groupIds: string[]): string {

@@ -118,8 +118,14 @@
           <td class="text-gray-600">{{ user.lastLogin || 'Nunca' }}</td>
           <td class="text-center">
             <div class="flex items-center justify-center gap-2">
-              <span class="text-sm font-medium text-gray-900">{{ user.permissions.length }}</span>
-              <span class="text-xs text-gray-500">permisos</span>
+              <div class="flex flex-wrap gap-1 justify-center max-w-xs">
+                <span *ngFor="let p of getPermissionBadges(user.permissions)" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  {{ p }}
+                </span>
+                <span *ngIf="getRemainingPermissionsCount(user.permissions) > 0" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-500">
+                  +{{ getRemainingPermissionsCount(user.permissions) }} más
+                </span>
+              </div>
             </div>
           </td>
           <td class="text-center">

@@ -86,7 +86,7 @@
           <span class="p-input-icon-left">
             <i class="pi pi-lock"></i>
             <input
-              type="password"
+              [type]="showPassword ? 'text' : 'password'"
               id="password"
               placeholder="Crea una contraseña"
               formControlName="password"
@@ -106,7 +106,7 @@
           <span class="p-input-icon-left">
             <i class="pi pi-lock"></i>
             <input
-              type="password"
+              [type]="showPassword ? 'text' : 'password'"
               id="confirmPassword"
               placeholder="Confirma tu contraseña"
               formControlName="confirmPassword"
@@ -121,6 +121,12 @@
           <small class="p-error" *ngIf="registerForm.errors?.['passwordMismatch'] && registerForm.get('confirmPassword')?.touched">
             Las contraseñas no coinciden
           </small>
+        </div>
+
+        <div class="field">
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" (change)="showPassword = !showPassword" /> Mostrar contraseñas
+          </label>
         </div>
       </div>
 
