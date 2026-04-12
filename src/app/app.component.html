@@ -12,11 +12,18 @@
           <button
             (click)="toggleAvatarDropdown()"
             class="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition">
-            <img
-              src="https://via.placeholder.com/32"
-              alt="Avatar"
-              class="w-8 h-8 rounded-full">
-            <span class="text-sm font-medium text-gray-700">Juan</span>
+            <ng-container *ngIf="userService.getCurrentUser()?.avatar; else defaultAvatar">
+              <img
+                [src]="userService.getCurrentUser()?.avatar"
+                alt="Avatar"
+                class="w-8 h-8 rounded-full">
+            </ng-container>
+            <ng-template #defaultAvatar>
+              <span class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+                <i class="pi pi-user"></i>
+              </span>
+            </ng-template>
+            <span class="text-sm font-medium text-gray-700">{{ userService.getCurrentUser()?.firstName || userService.getCurrentUser()?.username || 'Usuario' }}</span>
             <i class="pi pi-chevron-down text-gray-500"></i>
           </button>
 

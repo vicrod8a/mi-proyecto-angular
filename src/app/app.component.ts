@@ -17,7 +17,7 @@ export class AppComponent implements OnInit {
   showSidebar: boolean = true;
   avatarDropdownOpen: boolean = false;
 
-  constructor(private permService: PermissionService, private userService: UserService, private router: Router) {}
+  constructor(private permService: PermissionService, public userService: UserService, private router: Router) {}
 
   ngOnInit() {
     // Check initial route
