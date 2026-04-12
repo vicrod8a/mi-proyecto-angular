@@ -370,9 +370,13 @@ fastify.put('/users/:id/permissions', async (request: any, reply: any) => {
       if (typeof p === 'string') nameCandidates.push(p);
       else if (typeof p === 'number') idCandidates.push(p);
       else if (typeof p === 'object') {
-        if (p.name) nameCandidates.push(String(p.name));
-        else if (p.id) idCandidates.push(Number(p.id));
-      }
+          if (p.name) nameCandidates.push(String(p.name));
+          else if (p.id) {
+            // if id is numeric, treat as id; if it's a string, treat as canonical name
+            if (typeof p.id === 'number') idCandidates.push(Number(p.id));
+            else if (typeof p.id === 'string') nameCandidates.push(String(p.id));
+          }
+        }
     }
 
     // Resolve permission rows by name and/or id
@@ -436,6 +440,156 @@ fastify.put('/users/:id/permissions', async (request: any, reply: any) => {
     return reply.send({ success: true, message: 'Permissions updated' });
   } catch (e: any) {
     fastify.log.error({ err: e }, 'PUT /users/:id/permissions error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// POST /users/:id/permissions - add a single permission to a user
+fastify.post('/users/:id/permissions', async (request: any, reply: any) => {
+  const requesterId = await verifyAndGetUserId(request, reply);
+  if (!requesterId) return;
+  const targetId = Number(request.params.id);
+  // Normalize payload: Fastify may give a string for text/plain bodies
+  let payload: any = request.body || {};
+  if (typeof payload === 'string') {
+    try {
+      const parsed = JSON.parse(payload);
+      // If parsed is primitive (string/number), wrap it as { permission: parsed }
+      if (parsed === null || typeof parsed === 'object') payload = parsed || {};
+      else payload = { permission: parsed };
+    } catch (e) {
+      // not JSON — treat the raw string as the permission identifier
+      payload = { permission: payload };
+    }
+  }
+  const permInput = payload.permission; // can be id (number) or name (string) or object { id, name }
+
+  try {
+    // authorization: allow self or require permission.manage/system.admin
+    if (requesterId !== targetId) {
+      const { data: reqPerms, error: reqErr } = await supabase
+        .from('user_permissions')
+        .select('permission_id, permissions(name)')
+        .eq('user_id', requesterId);
+      if (reqErr) {
+        fastify.log.error({ err: reqErr }, 'Supabase select requester permissions error');
+        return reply.status(500).send({ success: false, message: 'Error checking permissions' });
+      }
+      const names = (reqPerms || []).map((r: any) => {
+        const perm: any = r.permissions;
+        if (!perm) return null;
+        if (Array.isArray(perm)) return perm[0]?.name || null;
+        return (perm as any).name || null;
+      }).filter(Boolean as any);
+      if (!names.includes('permission.manage') && !names.includes('system.admin')) {
+        return reply.status(403).send({ success: false, message: 'Forbidden' });
+      }
+    }
+
+    // resolve the permission id
+    let permId: number | null = null;
+    if (permInput === null || permInput === undefined) return reply.status(400).send({ success: false, message: 'Missing permission' });
+    if (typeof permInput === 'number') permId = Number(permInput);
+    else if (typeof permInput === 'string') {
+      const { data: p, error: pErr } = await supabase.from('permissions').select('id').eq('name', permInput).maybeSingle();
+      if (p && p.id) permId = Number(p.id);
+      if (pErr) {
+        fastify.log.error({ err: pErr }, 'Supabase select permission by name error');
+        return reply.status(500).send({ success: false, message: 'Error resolving permission' });
+      }
+    } else if (typeof permInput === 'object') {
+      if (permInput.id !== null && permInput.id !== undefined) {
+        if (typeof permInput.id === 'number') permId = Number(permInput.id);
+        else if (typeof permInput.id === 'string') {
+          // treat string id as the canonical permission name
+          const { data: p, error: pErr } = await supabase.from('permissions').select('id').eq('name', permInput.id).maybeSingle();
+          if (p && p.id) permId = Number(p.id);
+          if (pErr) {
+            fastify.log.error({ err: pErr }, 'Supabase select permission by name error');
+            return reply.status(500).send({ success: false, message: 'Error resolving permission' });
+          }
+        }
+      } else if (permInput.name) {
+        const { data: p, error: pErr } = await supabase.from('permissions').select('id').eq('name', permInput.name).maybeSingle();
+        if (p && p.id) permId = Number(p.id);
+        if (pErr) {
+          fastify.log.error({ err: pErr }, 'Supabase select permission by name error');
+          return reply.status(500).send({ success: false, message: 'Error resolving permission' });
+        }
+      }
+    }
+
+    if (!permId) return reply.status(404).send({ success: false, message: 'Permission not found' });
+
+    // insert ignoring duplicates (Supabase/Postgres will error on unique constraint; handle gracefully)
+    const { data: ins, error: insErr } = await supabase.from('user_permissions').insert({ user_id: targetId, permission_id: permId });
+    if (insErr) {
+      // if conflict, return success (idempotent)
+      fastify.log.warn({ err: insErr, targetId, permId }, 'Insert user_permission may have conflicted');
+      // try to detect conflict: if it's a unique violation, treat as success
+      return reply.send({ success: true, message: 'Permission already assigned' });
+    }
+
+    return reply.send({ success: true, message: 'Permission assigned' });
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'POST /users/:id/permissions error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// DELETE /users/:id/permissions/:perm - remove a single permission by id or name
+fastify.delete('/users/:id/permissions/:perm', async (request: any, reply: any) => {
+  const requesterId = await verifyAndGetUserId(request, reply);
+  if (!requesterId) return;
+  const targetId = Number(request.params.id);
+  const permParam = request.params.perm;
+
+  try {
+    // authorization: allow self or require permission.manage/system.admin
+    if (requesterId !== targetId) {
+      const { data: reqPerms, error: reqErr } = await supabase
+        .from('user_permissions')
+        .select('permission_id, permissions(name)')
+        .eq('user_id', requesterId);
+      if (reqErr) {
+        fastify.log.error({ err: reqErr }, 'Supabase select requester permissions error');
+        return reply.status(500).send({ success: false, message: 'Error checking permissions' });
+      }
+      const names = (reqPerms || []).map((r: any) => {
+        const perm: any = r.permissions;
+        if (!perm) return null;
+        if (Array.isArray(perm)) return perm[0]?.name || null;
+        return (perm as any).name || null;
+      }).filter(Boolean as any);
+      if (!names.includes('permission.manage') && !names.includes('system.admin')) {
+        return reply.status(403).send({ success: false, message: 'Forbidden' });
+      }
+    }
+
+    // resolve permParam to id
+    let permId: number | null = null;
+    if (!permParam) return reply.status(400).send({ success: false, message: 'Missing permission param' });
+    if (/^\d+$/.test(String(permParam))) permId = Number(permParam);
+    else {
+      const { data: p, error: pErr } = await supabase.from('permissions').select('id').eq('name', String(permParam)).maybeSingle();
+      if (p && p.id) permId = Number(p.id);
+      if (pErr) {
+        fastify.log.error({ err: pErr }, 'Supabase select permission by name error');
+        return reply.status(500).send({ success: false, message: 'Error resolving permission' });
+      }
+    }
+
+    if (!permId) return reply.status(404).send({ success: false, message: 'Permission not found' });
+
+    const { data: delData, error: delErr } = await supabase.from('user_permissions').delete().match({ user_id: targetId, permission_id: permId });
+    if (delErr) {
+      fastify.log.error({ err: delErr }, 'Supabase delete user_permission error');
+      return reply.status(500).send({ success: false, message: 'Error removing permission' });
+    }
+
+    return reply.send({ success: true, message: 'Permission removed' });
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'DELETE /users/:id/permissions/:perm error');
     return reply.status(500).send({ success: false, message: 'Internal error' });
   }
 });

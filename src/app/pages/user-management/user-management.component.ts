@@ -48,6 +48,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   userToDelete: User | null = null;
   userForm: FormGroup;
   selectedPermissions: string[] = [];
+  savingPermissions = false;
   get canManagePermissions(): boolean {
     return this.permissionService.hasPermission('permission.manage');
   }
@@ -139,7 +140,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     this.showPermissionsDialog = true;
   }
 
-  saveUser() {
+  async saveUser() {
     if (this.userForm.invalid) {
       this.messageService.add({
         severity: 'error',
@@ -161,19 +162,19 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     }
 
     if (this.isEditing && this.selectedUser) {
-      this.userService.updateUser(this.selectedUser.id, userData);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Usuario actualizado correctamente'
-      });
+      const ok = await this.userService.persistUserUpdate(this.selectedUser.id, userData);
+      if (ok) {
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario actualizado correctamente' });
+      } else {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar usuario' });
+      }
     } else {
-      this.userService.createUser(userData);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Usuario creado correctamente'
-      });
+      const created = await this.userService.createUser(userData as any);
+      if (created) {
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario creado correctamente' });
+      } else {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al crear usuario' });
+      }
     }
 
     this.showUserDialog = false;
@@ -206,20 +207,29 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
     // Persist selected permissions to backend via UserService
     (async () => {
-      const ok = await this.userService.setPermissionsForUser(this.selectedUser!.id, this.selectedPermissions);
-      if (ok) {
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Permisos actualizados correctamente' });
-      } else {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar permisos' });
-      }
+      this.savingPermissions = true;
+      try {
+        const ok = await this.userService.setPermissionsForUser(this.selectedUser!.id, this.selectedPermissions);
+        if (ok) {
+          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Permisos actualizados correctamente' });
+          // optimistic update of selectedUser in UI
+          this.selectedUser = { ...this.selectedUser!, permissions: [...this.selectedPermissions] };
+        } else {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar permisos' });
+        }
 
-      this.showPermissionsDialog = false;
-      this.loadUsers(); // Refresh the list
+        // Refresh the list to ensure canonical state
+        try { await this.loadUsers(); } catch (e) { /* ignore */ }
 
-      // If the current logged-in user had their permissions changed, reapply them.
-      const currentUser = this.userService.getCurrentUser();
-      if (currentUser && this.selectedUser && currentUser.id === this.selectedUser.id) {
-        this.permissionService.setPermissions(this.selectedPermissions);
+        // If the current logged-in user had their permissions changed, reapply them.
+        const currentUser = this.userService.getCurrentUser();
+        if (currentUser && this.selectedUser && currentUser.id === this.selectedUser.id) {
+          this.permissionService.setPermissions(this.selectedPermissions);
+        }
+
+      } finally {
+        this.savingPermissions = false;
+        this.showPermissionsDialog = false;
       }
     })();
   }
@@ -267,12 +277,51 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     return user.permissions ? user.permissions.includes('system.admin') : false;
   }
 
-  togglePermission(permissionId: string) {
+  async togglePermission(permissionId: string) {
+    // compute desired action
     const index = this.selectedPermissions.indexOf(permissionId);
-    if (index > -1) {
+    const removing = index > -1;
+
+    // Update UI selection immediately for responsiveness
+    if (removing) {
       this.selectedPermissions.splice(index, 1);
     } else {
       this.selectedPermissions.push(permissionId);
+    }
+
+    // Persist immediately when the current user can manage permissions
+    if (!this.selectedUser) return;
+    if (!this.canManagePermissions) return;
+
+    this.savingPermissions = true;
+    try {
+      let ok = false;
+      if (removing) {
+        ok = await this.userService.removePermissionFromUser(this.selectedUser.id, permissionId);
+      } else {
+        // prefer to send the full permission object when available so backend can resolve
+        const permObj = this.permissions.find(p => p.id === permissionId) || permissionId;
+        ok = await this.userService.addPermissionToUser(this.selectedUser.id, permObj);
+      }
+
+      if (!ok) {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar permisos' });
+        // revert optimistic change
+        if (removing) this.selectedPermissions.push(permissionId); else this.selectedPermissions = this.selectedPermissions.filter(p => p !== permissionId);
+      } else {
+        // read canonical permissions from service and update UI
+        const canonical = this.userService.getUserById(this.selectedUser.id)?.permissions || [];
+        this.selectedPermissions = [...canonical];
+        this.selectedUser = { ...this.selectedUser, permissions: [...canonical] };
+
+        // If current logged-in user modified own permissions, reapply
+        const currentUser = this.userService.getCurrentUser();
+        if (currentUser && currentUser.id === this.selectedUser.id) {
+          this.permissionService.setPermissions(canonical);
+        }
+      }
+    } finally {
+      this.savingPermissions = false;
     }
   }
 

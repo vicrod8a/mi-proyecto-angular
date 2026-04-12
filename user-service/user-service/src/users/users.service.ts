@@ -164,4 +164,59 @@ export class UsersService {
     if (error) throw error;
     return { message: 'Permisos actualizados' };
   }
+
+  async addPermission(userId: string, permissionInput: any) {
+    // resolve permission id
+    let permId: number | null = null;
+    if (!permissionInput && permissionInput !== 0) throw new Error('Missing permission');
+    if (typeof permissionInput === 'number') permId = Number(permissionInput);
+    else if (typeof permissionInput === 'string') {
+      const { data: p, error: pErr } = await supabase.from('permisos').select('id').eq('nombre', permissionInput).maybeSingle();
+      if (p && p.id) permId = Number(p.id);
+      if (pErr) throw pErr;
+    } else if (typeof permissionInput === 'object') {
+      if (permissionInput.id) permId = Number(permissionInput.id);
+      else if (permissionInput.nombre) {
+        const { data: p, error: pErr } = await supabase.from('permisos').select('id').eq('nombre', permissionInput.nombre).maybeSingle();
+        if (p && p.id) permId = Number(p.id);
+        if (pErr) throw pErr;
+      }
+    }
+
+    if (!permId) return { message: 'Permission not found' };
+
+    // fetch current permisos_globales
+    const { data: user, error: userErr } = await supabase.from('usuarios').select('permisos_globales').eq('id', userId).maybeSingle();
+    if (userErr) throw userErr;
+    const current: number[] = user?.permisos_globales || [];
+    if (current.includes(permId)) return { message: 'Already assigned' };
+    const updated = [...current, permId];
+
+    const { error: updErr } = await supabase.from('usuarios').update({ permisos_globales: updated }).eq('id', userId);
+    if (updErr) throw updErr;
+    return { message: 'Permission assigned' };
+  }
+
+  async removePermission(userId: string, permissionInput: any) {
+    // resolve permission id
+    let permId: number | null = null;
+    if (!permissionInput && permissionInput !== 0) throw new Error('Missing permission');
+    if (/^\d+$/.test(String(permissionInput))) permId = Number(permissionInput);
+    else if (typeof permissionInput === 'string') {
+      const { data: p, error: pErr } = await supabase.from('permisos').select('id').eq('nombre', permissionInput).maybeSingle();
+      if (p && p.id) permId = Number(p.id);
+      if (pErr) throw pErr;
+    }
+
+    if (!permId) return { message: 'Permission not found' };
+
+    const { data: user, error: userErr } = await supabase.from('usuarios').select('permisos_globales').eq('id', userId).maybeSingle();
+    if (userErr) throw userErr;
+    const current: number[] = user?.permisos_globales || [];
+    const updated = current.filter((id) => Number(id) !== permId);
+
+    const { error: updErr } = await supabase.from('usuarios').update({ permisos_globales: updated }).eq('id', userId);
+    if (updErr) throw updErr;
+    return { message: 'Permission removed' };
+  }
 }

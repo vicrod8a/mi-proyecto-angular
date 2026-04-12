@@ -319,7 +319,7 @@
   [appendTo]="'body'" [baseZIndex]="10000"
   [style]="{width: '900px', 'background-color': 'white'}"
   header="Gestionar Permisos"
-  [closable]="true"
+  [closable]="false"
   styleClass="custom-dialog"
   [appendTo]="'body'"
   [baseZIndex]="10000"
@@ -346,7 +346,7 @@
                 type="checkbox"
                 [id]="permission.id"
                 [checked]="selectedPermissions.includes(permission.id)"
-                [disabled]="!canManagePermissions"
+                [disabled]="!canManagePermissions || savingPermissions"
                 (change)="togglePermission(permission.id)"
                 class="permission-checkbox">
               <div class="permission-content">
@@ -366,17 +366,11 @@
       <div class="flex gap-4">
         <p-button
           type="button"
-          label="Cancelar"
-          icon="pi pi-times"
-          class="p-button-secondary p-button-lg bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
-          (click)="closePermissionsDialog()">
-        </p-button>
-        <p-button
-          type="button"
-          label="Guardar Permisos"
+          label="Listo"
           icon="pi pi-check"
           class="p-button-primary p-button-lg bg-gradient-to-r from-blue-600 to-indigo-600 border-0 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 text-base px-5 py-3 rounded-full"
-          (click)="savePermissions()">
+          (click)="closePermissionsDialog()"
+          [disabled]="savingPermissions">
         </p-button>
       </div>
     </div>

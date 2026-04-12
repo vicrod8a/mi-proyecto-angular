@@ -74,6 +74,17 @@ export class UserApiClient {
   async setPermissions(id: string, permissions: string[], token?: string) {
     return this.request(`/users/${id}/permissions`, { method: 'PUT', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: JSON.stringify({ permissions }) });
   }
+
+  async addPermission(id: string, permission: any, token?: string) {
+    const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return this.request(`/users/${id}/permissions`, { method: 'POST', headers, body: JSON.stringify({ permission }) });
+  }
+
+  async removePermission(id: string, permissionIdentifier: string | number, token?: string) {
+    // permissionIdentifier may be a numeric id or a name string
+    const path = `/users/${id}/permissions/${encodeURIComponent(String(permissionIdentifier))}`;
+    return this.request(path, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  }
 }
 
 export default UserApiClient;

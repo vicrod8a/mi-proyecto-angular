@@ -57,6 +57,20 @@ export class UsersController {
     return { statusCode: 200, intOpCode: 0, data };
   }
 
+  @Post('users/:id/permissions')
+  @UseGuards(AuthGuard('jwt'))
+  async addPermission(@Param('id') id: string, @Body() body: { permission: any }) {
+    const data = await this.usersService.addPermission(id, body.permission);
+    return { statusCode: 200, intOpCode: 0, data };
+  }
+
+  @Delete('users/:id/permissions/:perm')
+  @UseGuards(AuthGuard('jwt'))
+  async removePermission(@Param('id') id: string, @Param('perm') perm: string) {
+    const data = await this.usersService.removePermission(id, perm);
+    return { statusCode: 200, intOpCode: 0, data };
+  }
+
   @Delete('users/:id')
   @UseGuards(AuthGuard('jwt'))
   async delete(@Param('id') id: string) {
