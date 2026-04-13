@@ -317,7 +317,10 @@ export class UserService {
       try {
         const users = this.usersSubject.value.map(u => u.id === userId ? { ...u, permissions: [...permissions] } : u);
         this.usersSubject.next(users);
-        this.saveCurrentUserObjectToStorage(users.find(u => u.id === userId) || null);
+        // Only overwrite the persisted current-user object if we're updating the current user
+        if (String(userId) === String(this.currentUserId)) {
+          this.saveCurrentUserObjectToStorage(users.find(u => u.id === userId) || null);
+        }
       } catch (e) {
         console.warn('[UserService] local update after setPermissions failed', e);
       }
@@ -515,7 +518,13 @@ export class UserService {
         // Pass the raw input (id, name, or object) so backend can resolve
         await this.api.addPermission(userId, permissionInput, token);
         // refresh canonical state
-        await this.setCurrentUser(userId);
+        // Only refresh current-user state when modifying the logged-in user
+        if (String(userId) === String(this.currentUserId)) {
+          await this.setCurrentUser(userId);
+        } else {
+          // Otherwise, fetch fresh users list without switching current user
+          try { await this.syncUsers(); } catch (e) { /* ignore */ }
+        }
         return true;
       } catch (e) {
         console.warn('[UserService] addPermissionToUser API persist failed', e);
@@ -546,7 +555,11 @@ export class UserService {
       try {
         await this.api.removePermission(userId, permissionId, token);
         // update local canonical state
-        await this.setCurrentUser(userId);
+        if (String(userId) === String(this.currentUserId)) {
+          await this.setCurrentUser(userId);
+        } else {
+          try { await this.syncUsers(); } catch (e) { /* ignore */ }
+        }
         return true;
       } catch (e) {
         console.warn('[UserService] removePermissionFromUser API persist failed', e);
