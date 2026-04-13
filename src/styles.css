@@ -228,3 +228,29 @@
   border-radius: 1.5rem !important;
   overflow: hidden !important;
 }
+
+/* Primary color variable and global overrides so theme color propagates */
+:root {
+  --primary-color: #3b82f6;
+  --primary-contrast: #ffffff;
+}
+
+/* Utility aliases to use primary color across existing tailwind utility classes */
+.bg-primary { background-color: var(--primary-color) !important; color: var(--primary-contrast) !important; }
+.text-primary { color: var(--primary-color) !important; }
+.border-primary { border-color: var(--primary-color) !important; }
+
+/* Override common Tailwind blue utilities used in the app so they reflect the chosen primary color */
+.bg-blue-600 { background-color: var(--primary-color) !important; }
+.hover\:bg-blue-700:hover { background-color: var(--primary-color) !important; }
+.text-blue-600 { color: var(--primary-color) !important; }
+.border-blue-600 { border-color: var(--primary-color) !important; }
+
+/* Buttons that use gradient in confirm dialogs should adapt to a primary-based gradient */
+::ng-deep .p-confirmdialog .p-confirmdialog-accept-button {
+  background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color) 70%, black 30%)) !important;
+}
+
+/* Apply primary color to outlines and focus rings where applicable */
+a, button, .btn-primary { outline-color: var(--primary-color); }
+

@@ -23,7 +23,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   groups: Group[] = [];
   groupsDropdownVisible: boolean = false;
   reportsDropdownVisible: boolean = false;
-  appVersion: string = '0.1.0';
+  appVersion: string = '7.8.1';
 
   openGroupMenu: string | null = null; // which group submenu is open
 
@@ -53,9 +53,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.sidebarVisible = visible;
     });
 
-    // Cargar todos los grupos disponibles
+    // Cargar solo los grupos visibles para el usuario (propios, miembros o invitados)
     this.groupService.getGroups().subscribe(groups => {
-      this.groups = groups;
+      this.groups = groups.filter(g => g.membershipStatus && g.membershipStatus !== 'none');
     });
   }
 
@@ -99,6 +99,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   leaveGroup(groupId: string): void {
     this.groupService.leaveGroup(groupId);
+  }
+
+  acceptInvitation(groupId: string): void {
+    this.groupService.acceptInvitation(groupId);
   }
 
   saveSidebarState() {

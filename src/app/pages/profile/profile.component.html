@@ -140,24 +140,34 @@
 
           <div>
             <label for="password" class="block font-semibold text-gray-700 mb-2">Contraseña</label>
-            <input 
-              pInputText 
-              id="password" 
-              [(ngModel)]="editingUser.password" 
-              type="password" 
-              placeholder="Crea una contraseña"
-              class="w-full border border-gray-300 rounded-lg p-2">
+            <div class="relative">
+              <input
+                pInputText
+                id="password"
+                [(ngModel)]="editingUser.password"
+                [type]="showPassword ? 'text' : 'password'"
+                placeholder="Crea una contraseña"
+                class="w-full border border-gray-300 rounded-lg p-2">
+              <button type="button" class="absolute right-3 top-2 text-gray-500" (click)="showPassword = !showPassword" aria-label="Mostrar contraseña">
+                <i [class]="showPassword ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+              </button>
+            </div>
           </div>
 
           <div class="mt-3">
             <label for="confirmPassword" class="block font-semibold text-gray-700 mb-2">Confirmar Contraseña</label>
-            <input 
-              pInputText 
-              id="confirmPassword" 
-              [(ngModel)]="editingUser.confirmPassword" 
-              type="password" 
-              placeholder="Confirma tu contraseña"
-              class="w-full border border-gray-300 rounded-lg p-2">
+            <div class="relative">
+              <input
+                pInputText
+                id="confirmPassword"
+                [(ngModel)]="editingUser.confirmPassword"
+                [type]="showConfirmPassword ? 'text' : 'password'"
+                placeholder="Confirma tu contraseña"
+                class="w-full border border-gray-300 rounded-lg p-2">
+              <button type="button" class="absolute right-3 top-2 text-gray-500" (click)="showConfirmPassword = !showConfirmPassword" aria-label="Mostrar confirmar contraseña">
+                <i [class]="showConfirmPassword ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -37,6 +37,10 @@ export const routes: Routes = [
         .then(m => m.ProfileComponent)
   },
   {
+    path: 'settings',
+    loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent)
+  },
+  {
     path: 'groups',
     loadComponent: () =>
       import('./pages/groups-management/groups-management')

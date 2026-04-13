@@ -1,12 +1,20 @@
 export class UserApiClient {
-  baseUrl = 'http://127.0.0.1:3001';
+  // Route all user API calls through the API Gateway
+  // Gateway proxies `/users` -> user service — keep base at gateway root
+  baseUrl = 'http://127.0.0.1:3000';
 
   private async request(path: string, opts: RequestInit = {}) {
-    const res = await fetch(this.baseUrl + path, {
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-      credentials: 'omit',
+    const hasBody = opts.body !== undefined && opts.body !== null;
+    const mergedHeaders: Record<string, string> = { ...(opts.headers || {}) } as Record<string, string>;
+    if (hasBody && !Object.keys(mergedHeaders).some(h => h.toLowerCase() === 'content-type')) {
+      mergedHeaders['Content-Type'] = 'application/json';
+    }
+    const fetchOpts: RequestInit = {
       ...opts,
-    });
+      headers: mergedHeaders,
+      credentials: 'omit',
+    };
+    const res = await fetch(this.baseUrl + path, fetchOpts);
     const body = await res.json().catch(() => null);
     if (!res.ok) {
       const err = new Error((body && (body.message || body.error)) || res.statusText);
@@ -18,14 +26,14 @@ export class UserApiClient {
   }
 
   async login(email: string, password: string) {
-    return this.request('/login', {
+    return this.request('/users/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
   }
 
   async register(payload: any) {
-    return this.request('/register', {
+    return this.request('/users/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

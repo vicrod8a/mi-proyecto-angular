@@ -44,13 +44,19 @@ CREATE TABLE groups (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de membresía de grupos
+-- Tabla de membresía de grupos (soporta invitaciones)
 CREATE TABLE group_members (
   id SERIAL PRIMARY KEY,
   group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role VARCHAR(20) DEFAULT 'member',
-  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  -- 'owner' | 'member' | 'invited'
+  role VARCHAR(20) DEFAULT 'member' NOT NULL,
+  -- fecha en que realmente se unió (NULL mientras solo esté invitado)
+  joined_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  -- quién envió la invitación (si aplica)
+  invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  -- cuándo se creó la invitación (NULL si la fila representa una unión directa)
+  invited_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   UNIQUE(group_id, user_id)
 );
 

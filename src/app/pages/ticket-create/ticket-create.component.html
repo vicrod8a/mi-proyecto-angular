@@ -43,7 +43,10 @@
       </div>
       <div>
         <label class="block text-sm font-medium">Asignado a (opcional)</label>
-        <input formControlName="assignedTo" class="w-full p-2 border rounded" placeholder="Nombre del asignado (dejar vacío para asignarte)">
+        <select formControlName="assignedTo" class="w-full p-2 border rounded">
+          <option value="">(Sin asignar)</option>
+          <option *ngFor="let u of groupMembers" [value]="u.id">{{ u.displayName }}</option>
+        </select>
       </div>
       <div>
         <label class="block text-sm font-medium">Prioridad *</label>

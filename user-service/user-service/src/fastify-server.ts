@@ -632,6 +632,10 @@ fastify.put('/users/:id', async (request: any, reply: any) => {
     if (body.phone) update.phone = body.phone;
     if (body.birthdate) update.birthdate = body.birthdate;
 
+    // allow role and active status to be updated by authorized callers
+    if (body.role) update.role = body.role;
+    if (body.is_active !== undefined) update.is_active = body.is_active;
+
     if (body.password) {
       const hashed = await bcrypt.hash(body.password, 10);
       update.password_hash = hashed;
@@ -686,8 +690,12 @@ fastify.post('/users', async (request: any, reply: any) => {
       return reply.status(403).send({ success: false, message: 'Forbidden' });
     }
 
-    const [first_name, ...rest] = (body.first_name || body.fullName || '').split(' ');
-    const last_name = rest.join(' ') || null;
+    const fullSource = body.first_name || body.fullName || '';
+    const [first_name, ...rest] = String(fullSource).split(' ');
+    // Prefer explicit last_name if provided by the client; otherwise derive from fullName/first_name
+    const last_name = (body.last_name !== undefined && body.last_name !== null)
+      ? body.last_name
+      : (rest.join(' ') || null);
     const password = body.password || Math.random().toString(36).slice(-8);
     const hash = await bcrypt.hash(password, 10);
 

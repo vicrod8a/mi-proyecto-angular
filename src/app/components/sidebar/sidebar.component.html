@@ -105,8 +105,8 @@
               <span class="text-xs text-gray-500 ml-auto">{{ group.memberCount }}</span>
             </a>
             <button
-              *ngIf="!group.isMember"
-              (click)="joinGroup(group.id)"
+              *ngIf="group.membershipStatus === 'invited'"
+              (click)="acceptInvitation(group.id)"
               class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"
               title="Unirse al grupo">
               Unirse

@@ -78,9 +78,16 @@ export class TicketListComponent implements OnInit, OnChanges {
 
     // Apply quick filter first
     switch (this.currentFilter) {
-      case 'my-tickets':
-        filtered = filtered.filter(ticket => ticket.assignedTo === this.currentUserName);
+      case 'my-tickets': {
+        const currentUser = this.userService.getCurrentUser();
+        const currentUserId = currentUser ? String(currentUser.id) : null;
+        if (currentUserId) {
+          filtered = filtered.filter(ticket => String(ticket.assigneeId || '') === currentUserId || String(ticket.creatorId || '') === currentUserId);
+        } else {
+          filtered = filtered.filter(ticket => ticket.assignedTo === this.currentUserName);
+        }
         break;
+      }
       case 'unassigned':
         filtered = filtered.filter(ticket => !ticket.assignedTo || ticket.assignedTo.trim() === '');
         break;
@@ -96,9 +103,13 @@ export class TicketListComponent implements OnInit, OnChanges {
 
     // Apply additional filters
     filtered = filtered.filter(ticket => {
+      const assignedMatch = !this.filterAssigned || (
+        (ticket.assigneeId && String(ticket.assigneeId).includes(this.filterAssigned)) ||
+        (ticket.assignedTo && ticket.assignedTo.toLowerCase().includes(this.filterAssigned.toLowerCase()))
+      );
       return (!this.filterStatus || ticket.status === this.filterStatus) &&
              (!this.filterPriority || ticket.priority === this.filterPriority) &&
-             (!this.filterAssigned || ticket.assignedTo.toLowerCase().includes(this.filterAssigned.toLowerCase()));
+             assignedMatch;
     });
 
     this.filteredTickets = filtered;

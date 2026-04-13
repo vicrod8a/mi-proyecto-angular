@@ -1,6 +1,7 @@
 import { Component, OnInit, OnChanges, SimpleChanges, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TicketService } from '../../services/ticket.service';
+import { UserService } from '../../services/user.service';
 import { Ticket } from '../../models/ticket.model';
 import { Router, ActivatedRoute } from '@angular/router';
 import { QuickFiltersComponent, QuickFilter } from '../../components/quick-filters/quick-filters.component';
@@ -33,7 +34,8 @@ export class TicketKanbanComponent implements OnInit, OnChanges {
     private router: Router,
     private route: ActivatedRoute,
     private permissionService: PermissionService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private userService: UserService
   ) { }
 
   ngOnInit(): void {
@@ -64,11 +66,20 @@ export class TicketKanbanComponent implements OnInit, OnChanges {
     let filtered = [...this.tickets];
 
     switch (this.currentFilter) {
-      case 'my-tickets':
-        filtered = filtered.filter(ticket => ticket.assignedTo === 'Juan'); // TODO: get current user
+      case 'my-tickets': {
+        const currentUser = this.userService.getCurrentUser();
+        const currentUserId = currentUser ? String(currentUser.id) : null;
+        if (currentUserId) {
+          filtered = filtered.filter(ticket => String(ticket.assigneeId || '') === currentUserId || String(ticket.creatorId || '') === currentUserId);
+        } else {
+          // fallback to name match if id not available
+          const currentName = currentUser ? (currentUser.firstName || currentUser.username || '') : '';
+          filtered = filtered.filter(ticket => ticket.assignedTo === currentName);
+        }
         break;
+      }
       case 'unassigned':
-        filtered = filtered.filter(ticket => !ticket.assignedTo || ticket.assignedTo.trim() === '');
+        filtered = filtered.filter(ticket => !ticket.assigneeId || String(ticket.assigneeId).trim() === '');
         break;
       case 'high-priority':
         filtered = filtered.filter(ticket => ticket.priority.startsWith('1'));

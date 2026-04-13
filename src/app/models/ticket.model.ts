@@ -4,6 +4,7 @@ export interface Ticket {
   description: string;
   status: 'Pendiente' | 'En progreso' | 'Revisión' | 'Hecho';
   assignedTo: string;
+  assigneeId?: string; // numeric id string for backend operations
   groupId: string; // identifier of the group this ticket belongs to
   // prioridad en español con número al inicio (1 = más alta)
   // usamos guion para separar num y texto
@@ -11,6 +12,7 @@ export interface Ticket {
   createdDate: Date;
   deadline?: Date;
   creator: string;
+  creatorId?: string;
   comments: Comment[];
   history: HistoryEntry[];
 }
@@ -30,4 +32,7 @@ export interface HistoryEntry {
   oldValue?: string; // Valor anterior
   newValue?: string; // Valor nuevo
   date: Date;
+  before?: any; // full snapshot before change
+  after?: any;  // full snapshot after change
+  editorName?: string; // human readable editor name
 }

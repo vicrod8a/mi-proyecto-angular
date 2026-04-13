@@ -1,0 +1,113 @@
+<div class="p-8 max-w-5xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-3xl font-bold">Configuración</h2>
+    <p class="text-sm text-gray-500">Personaliza apariencia y accesibilidad</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Theme card -->
+    <div class="col-span-1 md:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <h3 class="text-xl font-semibold">Tema</h3>
+          <p class="text-sm text-gray-500">Cambia entre modo brillante y oscuro y selecciona el color primario.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400">Vista previa</span>
+          <div class="w-12 h-8 rounded-md" [style.background]="theme.primaryColor"></div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="flex items-center gap-4">
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="radio" name="themeMode" [(ngModel)]="theme.mode" value="bright" class="hidden" (change)="saveTheme()" />
+            <div class="px-4 py-2 rounded-md shadow-sm bg-gray-50 hover:bg-gray-100" [class.border-2]="theme.mode==='bright'">Brillante</div>
+          </label>
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="radio" name="themeMode" [(ngModel)]="theme.mode" value="dark" class="hidden" (change)="saveTheme()" />
+            <div class="px-4 py-2 rounded-md shadow-sm bg-gray-900 text-white hover:bg-gray-800" [class.border-2]="theme.mode==='dark'">Oscura</div>
+          </label>
+        </div>
+
+        <div class="mt-4">
+          <label class="block text-sm text-gray-600 mb-2">Color primario</label>
+          <div class="flex items-center gap-3">
+            <input type="color" [(ngModel)]="theme.primaryColor" (change)="saveTheme()" class="h-10 w-16 p-0 border rounded" />
+            <div class="flex gap-2">
+              <button *ngFor="let c of ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6']" (click)="theme.primaryColor=c; saveTheme()" class="w-8 h-8 rounded shadow" [style.background]="c" [attr.aria-label]="c"></button>
+            </div>
+            <div class="ml-auto text-sm text-gray-500">El color se aplica de inmediato</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accessibility card -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div>
+        <h3 class="text-xl font-semibold">Accesibilidad</h3>
+        <p class="text-sm text-gray-500">Opciones para mejorar la visibilidad y compatibilidad con lectores de pantalla.</p>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">Escala de grises</div>
+            <div class="text-xs text-gray-400">Reduce la saturación para evitar distracciones de color</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="accessibility.grayscale" (change)="saveAccessibility()" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">Alto contraste</div>
+            <div class="text-xs text-gray-400">Aumenta contraste para mayor legibilidad</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="accessibility.highContrast" (change)="saveAccessibility()" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div>
+          <div class="font-medium mb-2">Filtros para daltonismo</div>
+          <div class="flex flex-col gap-2">
+            <label class="flex items-center justify-between">
+              <span class="text-sm">Protanopía</span>
+              <label class="switch"><input type="checkbox" [(ngModel)]="accessibility.protanopiaFilter" (change)="saveAccessibility()" /><span class="slider"></span></label>
+            </label>
+            <label class="flex items-center justify-between">
+              <span class="text-sm">Deuteranopía</span>
+              <label class="switch"><input type="checkbox" [(ngModel)]="accessibility.deuteranopiaFilter" (change)="saveAccessibility()" /><span class="slider"></span></label>
+            </label>
+            <label class="flex items-center justify-between">
+              <span class="text-sm">Tritanopía</span>
+              <label class="switch"><input type="checkbox" [(ngModel)]="accessibility.tritanopiaFilter" (change)="saveAccessibility()" /><span class="slider"></span></label>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">Modo lector de pantalla</div>
+            <div class="text-xs text-gray-400">Activa atributos destinados a lectores (TalkBack/VoiceOver)</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="accessibility.screenReader" (change)="saveAccessibility()" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="pt-3 border-t border-gray-100 mt-3">
+          <button class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600" (click)="resetAccessibility()">Restablecer accesibilidad</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 text-sm text-gray-500">Los cambios se guardan localmente en tu navegador y se aplican inmediatamente.</div>
+</div>

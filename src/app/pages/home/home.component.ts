@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { ChartModule } from 'primeng/chart';
@@ -19,7 +19,7 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   groups: Group[] = [];
   showJoinGroupDialog = false;
   invitationCode = '';
@@ -27,6 +27,8 @@ export class HomeComponent implements OnInit {
   // basic chart data
   smallChartData: any;
   smallChartOptions: any;
+
+  private groupsSub: any;
 
   constructor(
     private router: Router,
@@ -48,7 +50,14 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.groups = this.groupService.getMyGroups();
+    // Subscribe to groups observable so UI updates when groups or membership change
+    this.groupsSub = this.groupService.getGroups().subscribe(groups => {
+      this.groups = groups.filter(g => g.isMember);
+    });
+  }
+
+  ngOnDestroy(): void {
+    try { this.groupsSub?.unsubscribe(); } catch (e) {}
   }
 
   openGroup(group: Group) {
@@ -56,7 +65,7 @@ export class HomeComponent implements OnInit {
     this.router.navigate(['/group', encodeURIComponent(group.id)]);
   }
 
-  joinGroup() {
+  async joinGroup() {
     if (!this.invitationCode.trim()) {
       this.messageService.add({
         severity: 'error',
@@ -66,7 +75,7 @@ export class HomeComponent implements OnInit {
       return;
     }
 
-    const success = this.groupService.joinGroupByCode(this.invitationCode.toUpperCase());
+    const success = await this.groupService.joinGroupByCode(this.invitationCode);
     if (success) {
       this.messageService.add({
         severity: 'success',

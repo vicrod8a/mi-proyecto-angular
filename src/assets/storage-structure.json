@@ -2,70 +2,23 @@
   "description": "Estructura de datos almacenados en localStorage",
   "keys": {
     "mi-proyecto-users": {
-      "description": "Lista de usuarios del sistema",
-      "example": [
-        {
-          "id": "1",
-          "username": "superAdmin",
-          "email": "admin@company.com",
-          "firstName": "Super",
-          "lastName": "Admin",
-          "role": "Super Administrator",
-          "permissions": ["ticket.create", "ticket.read", "ticket.update", "ticket.delete", "group.create", "group.read", "group.update", "group.delete", "user.create", "user.read", "user.update", "user.delete", "permission.manage", "system.admin", "reports.view"],
-          "isActive": true,
-          "createdDate": "2024-01-01",
-          "lastLogin": "2024-12-09",
-          "groups": ["equipo-dev", "soporte"],
-          "password": "SuperAdmin@123",
-          "phone": "+34 912 345 678",
-          "address": "Calle Principal 123, Madrid, España",
-          "birthDate": "1985-05-15",
-          "avatar": "https://i.pravatar.cc/150?img=1"
-        }
-      ],
+      "description": "Lista de usuarios del sistema (vacía en ejemplos)",
+      "example": [],
       "persistent": true
     },
     "mi-proyecto-current-user": {
-      "description": "ID del usuario actualmente conectado",
-      "example": "1",
+      "description": "ID del usuario actualmente conectado (si hay sesión)",
+      "example": null,
       "persistent": true
     },
     "mi-proyecto-groups": {
-      "description": "Lista de grupos del sistema",
-      "example": [
-        {
-          "id": "equipo-dev",
-          "name": "Equipo Dev",
-          "description": "Equipo de desarrollo principal",
-          "memberCount": 8,
-          "isMember": false,
-          "level": "Avanzado",
-          "author": "Juan Pérez",
-          "members": "Juan, María, Carlos, Pedro",
-          "tickets": 15,
-          "createdDate": "2024-01-10"
-        }
-      ],
+      "description": "Lista de grupos del sistema (vacía en ejemplos)",
+      "example": [],
       "persistent": true
     },
     "mi-proyecto-tickets": {
-      "description": "Lista de tickets/tareas del sistema",
-      "example": [
-        {
-          "id": "1",
-          "title": "Implementar autenticación con JWT",
-          "description": "Crear el sistema de autenticación con JWT para seguridad mejorada",
-          "status": "Hecho",
-          "assignedTo": "Juan",
-          "groupId": "equipo-dev",
-          "priority": "1 - Urgente",
-          "createdDate": "2024-01-01T00:00:00.000Z",
-          "deadline": "2024-01-05T00:00:00.000Z",
-          "creator": "Super",
-          "comments": [],
-          "history": []
-        }
-      ],
+      "description": "Lista de tickets/tareas del sistema (vacía en ejemplos)",
+      "example": [],
       "persistent": true
     }
   },

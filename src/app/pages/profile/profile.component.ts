@@ -34,6 +34,8 @@ export class ProfileComponent implements OnInit {
   user: UserProfile | null = null;
   editingUser: UserProfile | null = null;
   editingFullName: string = '';
+  showPassword = false;
+  showConfirmPassword = false;
   assignedTickets: Ticket[] = [];
   ticketSummary = {
     pendiente: 0,
@@ -106,11 +108,17 @@ export class ProfileComponent implements OnInit {
     if (this.isEditing) {
       this.editingUser = this.user ? { ...this.user } : null;
       this.isEditing = false;
-    } else {
-      this.editingUser = this.user ? { ...this.user } : null;
-      this.editingFullName = this.user ? `${this.user.firstName} ${this.user.lastName}`.trim() : '';
-      this.isEditing = true;
+      return;
     }
+
+    (async () => {
+      // ensure we have the latest canonical values from backend before editing
+      try { await this.profileService.refreshCurrentUser(); } catch (e) { /* ignore */ }
+      const current = this.profileService.getCurrentUser();
+      this.editingUser = current ? { ...current } : (this.user ? { ...this.user } : null);
+      this.editingFullName = (this.editingUser ? `${this.editingUser.firstName} ${this.editingUser.lastName}`.trim() : '');
+      this.isEditing = true;
+    })();
   }
 
   saveProfile() {
@@ -119,28 +127,59 @@ export class ProfileComponent implements OnInit {
     const parts = (this.editingFullName || '').trim().split(/\s+/);
     this.editingUser.firstName = parts.shift() || '';
     this.editingUser.lastName = parts.join(' ') || '';
-
     // Validar campos obligatorios
-    if (!this.editingUser.username || !this.editingUser.firstName || !this.editingUser.email || !this.editingUser.phone || !this.editingUser.address || !this.editingUser.birthDate) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Campos inválidos',
-        detail: 'Por favor completa todos los campos obligatorios',
-        styleClass: 'custom-toast'
-      });
+    if (!this.editingUser.username || !this.editingUser.firstName || !this.editingUser.email) {
+      this.messageService.add({ severity: 'warn', summary: 'Campos inválidos', detail: 'Nombre de usuario, nombre y email son obligatorios', styleClass: 'custom-toast' });
       return;
     }
 
+    // Validar fecha de nacimiento (no futura, razonable)
+    if (this.editingUser.birthDate) {
+      const bd = new Date(this.editingUser.birthDate);
+      const now = new Date();
+      const earliest = new Date('1900-01-01');
+      if (isNaN(bd.getTime()) || bd > now || bd < earliest) {
+        this.messageService.add({ severity: 'warn', summary: 'Fecha inválida', detail: 'La fecha de nacimiento debe ser válida y anterior a hoy', styleClass: 'custom-toast' });
+        return;
+      }
+    }
+
+    // Validar contraseña si fue proporcionada
+    const pw = (this.editingUser.password || '').trim();
+    const cpw = (this.editingUser.confirmPassword || '').trim();
+    if (pw) {
+      // Requerir mínimo 8 caracteres, mayúscula, minúscula, dígito y carácter especial
+      const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+      if (!pwRegex.test(pw)) {
+        this.messageService.add({ severity: 'warn', summary: 'Contraseña débil', detail: 'La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y un caracter especial', styleClass: 'custom-toast' });
+        return;
+      }
+      if (pw !== cpw) {
+        this.messageService.add({ severity: 'warn', summary: 'Contraseñas no coinciden', detail: 'La contraseña y su confirmación deben coincidir', styleClass: 'custom-toast' });
+        return;
+      }
+    }
+
     // Persist via profile service (which updates userService/local + will call backend if available)
-    this.profileService.updateUser(this.editingUser);
-    this.user = { ...this.editingUser };
-    this.isEditing = false;
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Éxito',
-      detail: 'Perfil actualizado correctamente',
-      styleClass: 'custom-toast'
-    });
+    (async () => {
+      const ok = await this.profileService.updateUser(this.editingUser!);
+      // read canonical current user from ProfileService so view shows DB-canonical values
+      const canonical = this.profileService.getCurrentUser() || (this.editingUser as UserProfile);
+      if (ok) {
+        this.user = canonical;
+        this.editingUser = { ...canonical };
+        this.isEditing = false;
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Perfil actualizado correctamente', styleClass: 'custom-toast' });
+      } else {
+        // even on failure, show the locally-updated values so the user sees immediate feedback
+        this.user = canonical;
+        this.editingUser = { ...canonical };
+        this.isEditing = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el perfil en el servidor. Los cambios se aplicaron localmente.', styleClass: 'custom-toast' });
+      }
+      // refresh tickets and summaries for updated user
+      this.loadAssignedTickets();
+    })();
   }
 
   cancelEdit() {

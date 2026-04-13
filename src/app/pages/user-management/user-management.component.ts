@@ -39,7 +39,6 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   permissions: Permission[] = [];
   permissionsByCategory: { [category: string]: Permission[] } = {};
 
-  // previously used for charts
   showUserDialog = false;
   showPermissionsDialog = false;
   deleteConfirmModalVisible = false;
@@ -49,9 +48,13 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   userForm: FormGroup;
   selectedPermissions: string[] = [];
   savingPermissions = false;
+  showPassword: boolean = false;
+  showConfirmPassword: boolean = false;
+
   get canManagePermissions(): boolean {
     return this.permissionService.hasPermission('permission.manage');
   }
+
   availableGroups = [
     { label: 'Equipo Dev', value: 'equipo-dev' },
     { label: 'Soporte', value: 'soporte' },
@@ -74,10 +77,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       email: ['', [Validators.required, Validators.email]],
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
-      role: ['', Validators.required],
       isActive: [true],
-      groups: [[]]
+      password: [''],
+      confirmPassword: [''],
+      phone: [''],
+      address: [''],
+      birthDate: ['']
     });
+    this.showPassword = false;
+    this.showConfirmPassword = false;
   }
 
   ngOnInit() {
@@ -90,15 +98,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   async loadUsers() {
-    // Try to sync from backend first
-    try {
-      await this.userService.syncUsers();
-    } catch (e) {
-      // ignore
-    }
-    this.userService.getUsers().subscribe((users) => {
-      this.users = users;
-    });
+    try { await this.userService.syncUsers(); } catch (e) { /* ignore */ }
+    this.userService.getUsers().subscribe(users => { this.users = users; });
   }
 
   loadPermissions() {
@@ -108,28 +109,28 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleSidebar() {
-    this.sidebarService.toggleSidebar();
-  }
+  toggleSidebar() { this.sidebarService.toggleSidebar(); }
 
   openNewUserDialog() {
     this.isEditing = false;
     this.selectedUser = null;
-    this.userForm.reset({ isActive: true, groups: [] });
+    this.userForm.reset({ isActive: true });
     this.showUserDialog = true;
   }
 
-  openEditUserDialog(user: User) {
+  async openEditUserDialog(user: User) {
     this.isEditing = true;
-    this.selectedUser = user;
+    const fresh = await this.userService.fetchUserById(user.id);
+    this.selectedUser = fresh || user;
     this.userForm.patchValue({
-      username: user.username,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      isActive: user.isActive,
-      groups: user.groups
+      username: this.selectedUser.username,
+      email: this.selectedUser.email,
+      firstName: this.selectedUser.firstName,
+      lastName: this.selectedUser.lastName,
+      isActive: this.selectedUser.isActive,
+      phone: (this.selectedUser as any).phone || '',
+      address: (this.selectedUser as any).address || '',
+      birthDate: (this.selectedUser as any).birthdate || (this.selectedUser as any).birthDate || ''
     });
     this.showUserDialog = true;
   }
@@ -142,39 +143,34 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   async saveUser() {
     if (this.userForm.invalid) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Por favor complete todos los campos correctamente'
-      });
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Por favor complete todos los campos correctamente' });
       return;
     }
-
     const userData = this.userForm.value;
+    const payload = { ...userData } as any;
+    delete payload.confirmPassword;
 
-    // Validate unique username when creating
     if (!this.isEditing) {
-      const exists = this.users.find((u) => u.username === userData.username);
-      if (exists) {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'El nombre de usuario ya existe' });
-        return;
-      }
+      const exists = this.users.find(u => u.username === userData.username);
+      if (exists) { this.messageService.add({ severity: 'error', summary: 'Error', detail: 'El nombre de usuario ya existe' }); return; }
+      const pw = (userData.password || '').trim();
+      const cpw = (userData.confirmPassword || '').trim();
+      if (!pw || pw.length < 6) { this.messageService.add({ severity: 'error', summary: 'Error', detail: 'La contraseña es requerida (mínimo 6 caracteres)' }); return; }
+      if (pw !== cpw) { this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Las contraseñas no coinciden' }); return; }
     }
 
     if (this.isEditing && this.selectedUser) {
-      const ok = await this.userService.persistUserUpdate(this.selectedUser.id, userData);
-      if (ok) {
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario actualizado correctamente' });
-      } else {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar usuario' });
+      if (payload.password) {
+        const cpw = this.userForm.value.confirmPassword || '';
+        if (payload.password !== cpw) { this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Las contraseñas no coinciden' }); return; }
       }
+      const ok = await this.userService.persistUserUpdate(this.selectedUser.id, payload);
+      if (ok) this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario actualizado correctamente' });
+      else this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar usuario' });
     } else {
-      const created = await this.userService.createUser(userData as any);
-      if (created) {
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario creado correctamente' });
-      } else {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al crear usuario' });
-      }
+      const created = await this.userService.createUser(payload as any);
+      if (created) this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario creado correctamente' });
+      else this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al crear usuario' });
     }
 
     this.showUserDialog = false;
@@ -186,15 +182,17 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     this.deleteConfirmModalVisible = true;
   }
 
-  confirmDelete() {
+  async confirmDelete() {
     if (!this.userToDelete) return;
-    this.userService.deleteUser(this.userToDelete.id);
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Éxito',
-      detail: 'Usuario eliminado correctamente'
-    });
-    this.closeDeleteModal();
+    try {
+      await this.userService.deleteUser(this.userToDelete.id);
+      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario eliminado correctamente' });
+      try { await this.loadUsers(); } catch (e) { /* ignore */ }
+    } catch (e) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al eliminar usuario' });
+    } finally {
+      this.closeDeleteModal();
+    }
   }
 
   closeDeleteModal() {
@@ -204,48 +202,45 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   savePermissions() {
     if (!this.selectedUser) return;
-
-    // Persist selected permissions to backend via UserService
-    (async () => {
-      this.savingPermissions = true;
-      try {
-        const ok = await this.userService.setPermissionsForUser(this.selectedUser!.id, this.selectedPermissions);
+    this.savingPermissions = true;
+    this.userService.setPermissionsForUser(this.selectedUser.id, this.selectedPermissions)
+      .then(ok => {
         if (ok) {
           this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Permisos actualizados correctamente' });
-          // optimistic update of selectedUser in UI
-          this.selectedUser = { ...this.selectedUser!, permissions: [...this.selectedPermissions] };
+          this.selectedUser = { ...this.selectedUser!, permissions: [...this.selectedPermissions] } as User;
         } else {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar permisos' });
         }
-
-        // Refresh the list to ensure canonical state
-        try { await this.loadUsers(); } catch (e) { /* ignore */ }
-
-        // If the current logged-in user had their permissions changed, reapply them.
-        const currentUser = this.userService.getCurrentUser();
-        if (currentUser && this.selectedUser && currentUser.id === this.selectedUser.id) {
-          this.permissionService.setPermissions(this.selectedPermissions);
-        }
-
-      } finally {
+      })
+      .finally(() => {
         this.savingPermissions = false;
         this.showPermissionsDialog = false;
-      }
-    })();
+      });
   }
 
   closeUserDialog() {
     this.showUserDialog = false;
-    this.userForm.reset();
+    this.userForm.reset({ isActive: true });
+    this.isEditing = false;
+    this.selectedUser = null;
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleConfirmPasswordVisibility() {
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   closePermissionsDialog() {
     this.showPermissionsDialog = false;
     this.selectedPermissions = [];
+    this.selectedUser = null;
   }
 
   getPermissionNames(permissionIds: string[]): string {
-    return permissionIds.map(id => {
+    return (permissionIds || []).map(id => {
       const permission = this.permissions.find(p => p.id === id);
       return permission ? permission.name : id;
     }).join(', ');
@@ -253,12 +248,10 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   getPermissionBadges(permissionIds: string[] | undefined, limit = 3): string[] {
     if (!permissionIds || permissionIds.length === 0) return [];
-    return (permissionIds || [])
-      .slice(0, limit)
-      .map(id => {
-        const permission = this.permissions.find(p => p.id === id);
-        return permission ? permission.name : id;
-      });
+    return permissionIds.slice(0, limit).map(id => {
+      const permission = this.permissions.find(p => p.id === id);
+      return permission ? permission.name : id;
+    });
   }
 
   getRemainingPermissionsCount(permissionIds: string[] | undefined, limit = 3): number {
@@ -267,58 +260,35 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   getGroupNames(groupIds: string[]): string {
-    return groupIds.map(id => {
-      const group = this.availableGroups.find(g => g.value === id);
-      return group ? group.label : id;
-    }).join(', ');
+    if (!groupIds || groupIds.length === 0) return '';
+    return groupIds.map(id => this.availableGroups.find(g => g.value === id)?.label || id).join(', ');
   }
 
   isSuperAdmin(user: User): boolean {
-    return user.permissions ? user.permissions.includes('system.admin') : false;
+    return (user.permissions || []).includes('system.admin');
   }
 
   async togglePermission(permissionId: string) {
-    // compute desired action
     const index = this.selectedPermissions.indexOf(permissionId);
     const removing = index > -1;
+    if (removing) this.selectedPermissions.splice(index, 1); else this.selectedPermissions.push(permissionId);
 
-    // Update UI selection immediately for responsiveness
-    if (removing) {
-      this.selectedPermissions.splice(index, 1);
-    } else {
-      this.selectedPermissions.push(permissionId);
-    }
-
-    // Persist immediately when the current user can manage permissions
-    if (!this.selectedUser) return;
-    if (!this.canManagePermissions) return;
-
+    if (!this.selectedUser || !this.canManagePermissions) return;
     this.savingPermissions = true;
     try {
       let ok = false;
-      if (removing) {
-        ok = await this.userService.removePermissionFromUser(this.selectedUser.id, permissionId);
-      } else {
-        // prefer to send the full permission object when available so backend can resolve
-        const permObj = this.permissions.find(p => p.id === permissionId) || permissionId;
-        ok = await this.userService.addPermissionToUser(this.selectedUser.id, permObj);
-      }
+      if (removing) ok = await this.userService.removePermissionFromUser(this.selectedUser.id, permissionId);
+      else ok = await this.userService.addPermissionToUser(this.selectedUser.id, this.permissions.find(p => p.id === permissionId) || permissionId);
 
       if (!ok) {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar permisos' });
-        // revert optimistic change
         if (removing) this.selectedPermissions.push(permissionId); else this.selectedPermissions = this.selectedPermissions.filter(p => p !== permissionId);
       } else {
-        // read canonical permissions from service and update UI
         const canonical = this.userService.getUserById(this.selectedUser.id)?.permissions || [];
         this.selectedPermissions = [...canonical];
-        this.selectedUser = { ...this.selectedUser, permissions: [...canonical] };
-
-        // If current logged-in user modified own permissions, reapply
+        this.selectedUser = { ...this.selectedUser, permissions: [...canonical] } as User;
         const currentUser = this.userService.getCurrentUser();
-        if (currentUser && currentUser.id === this.selectedUser.id) {
-          this.permissionService.setPermissions(canonical);
-        }
+        if (currentUser && currentUser.id === this.selectedUser.id) this.permissionService.setPermissions(canonical);
       }
     } finally {
       this.savingPermissions = false;
@@ -333,34 +303,18 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   toggleGroupSelection(groupId: string) {
     const currentGroups = this.userForm.get('groups')?.value || [];
     const index = currentGroups.indexOf(groupId);
-
-    if (index > -1) {
-      currentGroups.splice(index, 1);
-    } else {
-      currentGroups.push(groupId);
-    }
-
+    if (index > -1) currentGroups.splice(index, 1); else currentGroups.push(groupId);
     this.userForm.get('groups')?.setValue([...currentGroups]);
   }
 
-  get totalUsers(): number {
-    return this.users.length;
-  }
-
-  get activeUsers(): number {
-    return this.users.filter(u => u.isActive).length;
-  }
-
-  get adminUsers(): number {
-    return this.users.filter(u => (u.permissions || []).includes('system.admin')).length;
-  }
+  get totalUsers(): number { return this.users.length; }
+  get activeUsers(): number { return this.users.filter(u => u.isActive).length; }
+  get adminUsers(): number { return this.users.filter(u => (u.permissions || []).includes('system.admin')).length; }
 
   canManageUsers(): boolean {
     const currentUser = this.userService.getCurrentUser();
-    return currentUser ? ((currentUser.permissions || []).includes('permission.manage') || (currentUser.permissions || []).includes('system.admin')) : false;
+    return !!currentUser && ((currentUser.permissions || []).includes('permission.manage') || (currentUser.permissions || []).includes('system.admin'));
   }
 
-  objectKeys(obj: any): string[] {
-    return Object.keys(obj);
-  }
+  objectKeys(obj: any): string[] { return obj ? Object.keys(obj) : []; }
 }

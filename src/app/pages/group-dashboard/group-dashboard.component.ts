@@ -105,8 +105,16 @@ export class GroupDashboardComponent implements OnInit {
 
   private loadGroupTickets() {
     if (this.groupId) {
-      this.ticketService.getTicketsForGroup(this.groupId).subscribe(tickets => {
-        this.tickets = tickets;
+      // Ensure we fetch the group's tickets from the server (if authenticated)
+      this.ticketService.fetchTicketsForGroup(this.groupId!).then(() => {
+        this.ticketService.getTicketsForGroup(this.groupId!).subscribe(tickets => {
+          this.tickets = tickets;
+        });
+      }).catch(() => {
+        // fallback to existing observable if fetch fails
+        this.ticketService.getTicketsForGroup(this.groupId!).subscribe(tickets => {
+          this.tickets = tickets;
+        });
       });
     } else {
       this.ticketService.getTickets().subscribe(tickets => {

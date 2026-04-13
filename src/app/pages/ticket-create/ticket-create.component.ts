@@ -27,6 +27,7 @@ export class TicketCreateComponent implements OnInit {
 
   availableGroups: Group[] = [];
   selectedGroupId: string | null = null; // in case user chooses manually
+  groupMembers: { id: string; displayName: string }[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -64,6 +65,9 @@ export class TicketCreateComponent implements OnInit {
 
       // once we have groups, validate current id if any
       this.validateGroup();
+      if (this.groupExists && this.groupId) {
+        this.loadGroupMembers(this.groupId).catch(() => {});
+      }
     });
   }
 
@@ -76,7 +80,7 @@ export class TicketCreateComponent implements OnInit {
 
     const group = this.groupService.getGroupById(this.groupId);
     if (!group) {
-      this.errorMessage = `El grupo \"${this.groupId}\" no existe.`;
+      this.errorMessage = `El grupo "${this.groupId}" no existe.`;
       this.groupExists = false;
       return;
     }
@@ -84,17 +88,40 @@ export class TicketCreateComponent implements OnInit {
     this.groupExists = true;
     this.currentGroupName = group.name;
 
-    // check membership: only members or superadmin can create
-    this.userCanCreate = this.userService.isMemberOfGroup(this.groupId);
+    // check membership: prefer authoritative source from the group object
+    const current = this.userService.getCurrentUser();
+    const isMemberFromGroup = current ? (Array.isArray(group.membersList) && group.membersList.map(String).includes(String(current.id))) : false;
+    const isAdmin = current ? this.userService.isSuperAdmin(current.id) : false;
+    this.userCanCreate = isMemberFromGroup || isAdmin;
     if (!this.userCanCreate) {
-      this.errorMessage =
-        'No perteneces a este grupo. Solo los miembros del grupo pueden crear tickets.';
+      this.errorMessage = 'No perteneces a este grupo. Solo los miembros del grupo pueden crear tickets.';
     } else {
       this.errorMessage = '';
     }
+    // load members for assignment dropdown
+    if (this.groupExists && this.groupId) this.loadGroupMembers(this.groupId).catch(() => {});
   }
 
-  createTicket(): void {
+  private async loadGroupMembers(groupId: string): Promise<void> {
+    try {
+      const g = this.groupService.getGroupById(groupId);
+      const memberIds = (g && Array.isArray(g.membersList)) ? g.membersList.slice() : [];
+      const members: { id: string; displayName: string }[] = [];
+      for (const id of memberIds) {
+        let user = this.userService.getUserById(String(id));
+        if (!user) {
+          user = await this.userService.fetchUserById(String(id));
+        }
+        if (user) members.push({ id: String(user.id), displayName: user.firstName || user.username || user.email });
+      }
+      this.groupMembers = members;
+    } catch (e) {
+      console.warn('[TicketCreate] loadGroupMembers failed', e);
+      this.groupMembers = [];
+    }
+  }
+
+  async createTicket(): Promise<void> {
     // Validate group exists and membership before creating ticket
     if (!this.groupExists || !this.groupId) {
       this.errorMessage = 'No se puede crear un ticket sin un grupo válido.';
@@ -109,13 +136,15 @@ export class TicketCreateComponent implements OnInit {
     if (this.createForm.valid) {
       const current = this.userService.getCurrentUser();
       const creatorName = current ? (current.username || current.firstName) : '';
-      const assignedDefault = this.createForm.value.assignedTo || (current ? current.firstName : '');
-      const newTicket: Ticket = {
+      const sel = this.groupMembers.find(m => String(m.id) === String(this.createForm.value.assignedTo));
+      const assignedDefault = sel ? sel.displayName : (this.createForm.value.assignedTo || (current ? current.firstName : ''));
+      const newTicket: any = {
         id: Date.now().toString(),
         title: this.createForm.value.title,
         description: this.createForm.value.description,
         status: this.createForm.value.status,
         assignedTo: assignedDefault,
+        assigneeId: this.createForm.value.assignedTo || null,
         priority: this.createForm.value.priority,
         createdDate: new Date(),
         creator: creatorName,
@@ -123,9 +152,10 @@ export class TicketCreateComponent implements OnInit {
         history: [],
         groupId: this.groupId
       };
-      this.ticketService.addTicket(newTicket);
-      // Navigate to ticket detail
-      this.router.navigate(['/group', this.groupId, 'ticket', newTicket.id]);
+      const created = await this.ticketService.addTicket(newTicket);
+      // Navigate to ticket detail using server-assigned ID when available
+      const targetId = created?.id || newTicket.id;
+      this.router.navigate(['/group', this.groupId, 'ticket', targetId]);
     }
   }
 

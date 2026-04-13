@@ -1,1 +1,23 @@
-/* Additional styles if needed */
+/* Ticket detail view styles */
+.ticket-card {
+	background: linear-gradient(180deg,#ffffff,#fbfbff);
+	border-radius: 10px;
+	padding: 24px;
+	box-shadow: 0 6px 18px rgba(16,24,40,0.08);
+}
+.ticket-header {
+	display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
+}
+.ticket-title { font-size:1.5rem;font-weight:700;color:#0f172a }
+.ticket-meta { color:#475569;font-size:0.9rem }
+.ticket-form input, .ticket-form textarea, .ticket-form select { border:1px solid #e6e9ef;padding:10px;border-radius:8px }
+.ticket-actions { margin-top:16px; display:flex; gap:8px }
+.history-entry { background:linear-gradient(90deg,#ffffff,#f8fafc); padding:12px;border-radius:8px;border-left:4px solid #3b82f6;margin-bottom:10px }
+.history-entry .meta { font-size:0.8rem;color:#64748b }
+.history-entry .change { margin-top:6px;font-size:0.95rem }
+.comment-box textarea { min-height:80px }
+
+@media (max-width:720px) {
+	.ticket-card { padding:16px }
+	.ticket-title { font-size:1.25rem }
+}

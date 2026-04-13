@@ -70,7 +70,9 @@ export class UserService {
     try {
       const raw = localStorage.getItem(this.CURRENT_USER_OBJ_KEY);
       if (!raw) return null;
-      return JSON.parse(raw) as User;
+      const parsed = JSON.parse(raw) as User;
+      console.log('[UserService] loadCurrentUserObjectFromStorage:', parsed.id, parsed.username || parsed.firstName);
+      return parsed;
     } catch (e) {
       return null;
     }
@@ -83,6 +85,7 @@ export class UserService {
         return;
       }
       localStorage.setItem(this.CURRENT_USER_OBJ_KEY, JSON.stringify(user));
+      console.log('[UserService] saveCurrentUserObjectToStorage:', user.id, user.username || user.firstName);
     } catch (e) {
       // ignore
     }
@@ -332,6 +335,8 @@ export class UserService {
   }
 
   async setCurrentUser(userId: string): Promise<void> {
+    console.log('[UserService] setCurrentUser called with', userId, new Date().toISOString());
+    console.log(new Error().stack);
     this.currentUserId = userId;
     this.saveCurrentUserIdToStorage(userId);
     try {
@@ -452,6 +457,11 @@ export class UserService {
       if (userData.phone) payload.phone = userData.phone;
       if (userData.address) payload.address = userData.address;
       if (userData.birthDate) payload.birthdate = userData.birthDate;
+      // allow admins to update role and active status from profile update
+      if ((userData as any).role) payload.role = (userData as any).role;
+      if (typeof (userData as any).isActive === 'boolean') payload.is_active = (userData as any).isActive;
+      // groups may be stored elsewhere; include if provided so backend can decide
+      if ((userData as any).groups) payload.groups = (userData as any).groups;
       if ((userData as any).password) payload.password = (userData as any).password;
 
       const resp = await this.api.updateUser(id, payload, token);
@@ -474,6 +484,16 @@ export class UserService {
 
       this.saveUsersToStorage(users);
       this.usersSubject.next(users);
+      // If we updated the currently logged-in user, persist the canonical object
+      try {
+        const curId = String(id);
+        if (String(this.currentUserId) === curId) {
+          const found = users.find((u) => String(u.id) === curId) || null;
+          this.saveCurrentUserObjectToStorage(found as User | null);
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
       return true;
     } catch (e) {
       console.warn('[UserService] persistUserUpdate failed', e);
@@ -494,6 +514,53 @@ export class UserService {
       await this.api.deleteUser(id, token);
     } catch (e) {
       console.warn('[UserService] deleteUser persist failed', e);
+    }
+  }
+
+  /**
+   * Fetch a single user from API and update local store (does not switch current user)
+   */
+  async fetchUserById(id: string): Promise<User | null> {
+    const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+    if (!token) return this.getUserById(id);
+    try {
+      const resp = await this.api.getById(id, token);
+      const envelope = resp && resp.data ? resp.data : resp;
+      if (!envelope) return null;
+      const normalized: User = {
+        id: String(envelope.id),
+        username: envelope.username || envelope.name || envelope.email || '',
+        email: envelope.email || '',
+        firstName: envelope.first_name || envelope.firstName || '',
+        lastName: envelope.last_name || envelope.lastName || '',
+        role: envelope.role || envelope.rol || '',
+        permissions: envelope.permissions || [],
+        isActive: envelope.is_active !== undefined ? !!envelope.is_active : true,
+        createdDate: envelope.created_at ? String(envelope.created_at).split('T')[0] : new Date().toISOString().split('T')[0],
+        lastLogin: envelope.last_login || envelope.lastLogin || undefined,
+        groups: envelope.groups || envelope.groupIds || [],
+        password: '',
+      } as User;
+
+      // merge into users list: replace existing or append
+      const users = this.usersSubject.value.slice();
+      const idx = users.findIndex(u => String(u.id) === String(id));
+      if (idx > -1) users[idx] = { ...users[idx], ...normalized };
+      else users.push(normalized);
+      this.usersSubject.next(users);
+      // If this is the current user, persist the canonical object so reload shows the changes
+      try {
+        if (String(this.currentUserId) === String(id)) {
+          const found = users.find(u => String(u.id) === String(id)) || null;
+          this.saveCurrentUserObjectToStorage(found as User | null);
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+      return normalized;
+    } catch (e) {
+      console.warn('[UserService] fetchUserById failed', e);
+      return this.getUserById(id);
     }
   }
 
@@ -591,7 +658,8 @@ export class UserService {
     const current = this.getCurrentUser();
     if (!current) return false;
     if (this.isSuperAdmin(current.id)) return true;
-    return current.groups.includes(groupId);
+    // Normalize types: stored group IDs may be strings or numbers
+    return (current.groups || []).map(String).includes(String(groupId));
   }
 
   private generateId(): string {

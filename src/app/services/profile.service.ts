@@ -34,13 +34,21 @@ export class ProfileService {
     if (currentUser) {
       this.updateUserSubject(currentUser);
     }
-    
-    this.userService.users$.subscribe(users => {
-      const current = this.userService.getCurrentUser();
-      if (current) {
-        this.updateUserSubject(current);
+    // Try to fetch canonical data from backend (if token present) so profile shows latest DB values
+    (async () => {
+      try {
+        await this.userService.syncUsers();
+      } catch (e) {
+        // ignore failures; we'll still rely on local state
       }
-    });
+      // subscribe to user list changes and update subject when current user exists
+      this.userService.users$.subscribe(users => {
+        const current = this.userService.getCurrentUser();
+        if (current) {
+          this.updateUserSubject(current);
+        }
+      });
+    })();
   }
 
   private updateUserSubject(user: User): void {
@@ -64,9 +72,23 @@ export class ProfileService {
     return this.user$;
   }
 
-  updateUser(userProfile: Partial<UserProfile>): void {
-    if (!userProfile.id) return;
-    
+  /**
+   * Fetch latest canonical user from backend and update subject.
+   */
+  async refreshCurrentUser(): Promise<void> {
+    const current = this.userService.getCurrentUser();
+    if (!current || !current.id) return;
+    try {
+      const fetched = await this.userService.fetchUserById(current.id);
+      if (fetched) this.updateUserSubject(fetched);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async updateUser(userProfile: Partial<UserProfile>): Promise<boolean> {
+    if (!userProfile.id) return false;
+
     const updateData: Partial<User> = {
       username: userProfile.username,
       firstName: userProfile.firstName,
@@ -76,18 +98,25 @@ export class ProfileService {
       address: userProfile.address,
       birthDate: userProfile.birthDate
     };
-    // Try to persist to backend; fallback to local update if not possible
-    (async () => {
+    // include password when provided
+    if (userProfile.password) updateData.password = userProfile.password;
+
+    try {
       const ok = await this.userService.persistUserUpdate(userProfile.id!, updateData as any);
       if (!ok) {
         // fallback local
         this.userService.updateUser(userProfile.id!, updateData);
       }
       const updatedUser = this.userService.getUserById(userProfile.id!);
-      if (updatedUser) {
-        this.updateUserSubject(updatedUser);
-      }
-    })();
+      if (updatedUser) this.updateUserSubject(updatedUser);
+      return ok;
+    } catch (e) {
+      // attempt local update on error
+      try { this.userService.updateUser(userProfile.id!, updateData); } catch {}
+      const updatedUser = this.userService.getUserById(userProfile.id!);
+      if (updatedUser) this.updateUserSubject(updatedUser);
+      return false;
+    }
   }
 
   deleteUser(): void {

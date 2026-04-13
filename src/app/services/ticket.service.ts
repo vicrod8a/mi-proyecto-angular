@@ -12,7 +12,73 @@ export class TicketService {
   // additionally track tickets created in this session or by user
   private readonly CREATED_KEY = 'mi-proyecto-created-tickets';
 
-  constructor(private userService: UserService) { }
+  constructor(private userService: UserService) {
+    // attempt to initialize from backend when auth token available
+    this.initFromServer().catch(() => {});
+  }
+
+  private async resolveNames(t: any) {
+    try {
+      const creatorId = t.creator_user_id ? String(t.creator_user_id) : null;
+      const assigneeId = t.assignee_user_id ? String(t.assignee_user_id) : null;
+      let creatorName = '';
+      let assigneeName = '';
+      if (creatorId) {
+        const u = await this.userService.fetchUserById(creatorId);
+        if (u) creatorName = u.firstName || u.username || '';
+      }
+      if (assigneeId) {
+        const u2 = await this.userService.fetchUserById(assigneeId);
+        if (u2) assigneeName = u2.firstName || u2.username || '';
+      }
+      return { assignedTo: assigneeName, creator: creatorName, assigneeId: assigneeId, creatorId: creatorId };
+    } catch (e) {
+      return { assignedTo: t.assignee_user_id ? String(t.assignee_user_id) : '', creator: t.creator_user_id ? String(t.creator_user_id) : '', assigneeId: t.assignee_user_id ? String(t.assignee_user_id) : undefined, creatorId: t.creator_user_id ? String(t.creator_user_id) : undefined };
+    }
+  }
+
+  private mapStatus(raw: any): Ticket['status'] {
+    if (!raw) return 'Pendiente';
+    const s = String(raw).toLowerCase();
+    if (s === 'new' || s === 'pending' || s === 'pendiente') return 'Pendiente';
+    if (s === 'in_progress' || s === 'in-progress' || s === 'in progress' || s === 'en progreso') return 'En progreso';
+    if (s === 'review' || s === 'in_review' || s === 'revision' || s === 'revisión') return 'Revisión';
+    if (s === 'done' || s === 'completed' || s === 'hecho') return 'Hecho';
+    return 'Pendiente';
+  }
+
+  // Try to load from server if auth token is present
+  async initFromServer(): Promise<void> {
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    if (!token) return;
+    try {
+      // Route ticket API calls through API Gateway
+      const API_BASE = 'http://127.0.0.1:3000';
+      const res = await fetch(`${API_BASE}/tickets`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) return;
+      const body = await res.json();
+      const data = body?.data || [];
+      const converted: Ticket[] = [];
+      for (const t of (data || [])) {
+        const names = await this.resolveNames(t);
+        converted.push({
+          ...t,
+          id: String(t.id),
+          groupId: String(t.group_id),
+          status: this.mapStatus(t.status),
+          createdDate: t.created_at ? new Date(t.created_at) : new Date(),
+          deadline: t.due_date ? new Date(t.due_date) : undefined,
+          assignedTo: names.assignedTo,
+          assigneeId: names.assigneeId,
+          creator: names.creator,
+          creatorId: names.creatorId
+        } as Ticket);
+      }
+      this.ticketsSubject.next(converted);
+    } catch (e) {
+      console.warn('[TicketService] Failed to load tickets from server', e);
+    }
+  }
 
   private ticketsSubject = new BehaviorSubject<Ticket[]>(this.loadTicketsFromStorage());
   public tickets$ = this.ticketsSubject.asObservable();
@@ -37,8 +103,8 @@ export class TicketService {
         console.warn('[TicketService] Error parsing stored tickets:', e);
       }
     }
-    // Return default tickets if nothing in storage
-    return this.getDefaultTickets();
+    // No default tickets in frontend; return empty list when nothing in storage
+    return [];
   }
 
   private loadCreatedFromStorage(): Ticket[] {
@@ -79,153 +145,13 @@ export class TicketService {
   }
 
   private getDefaultTickets(): Ticket[] {
-    return [
-      {
-        id: '1',
-        title: 'Implementar autenticación con JWT',
-        description: 'Crear el sistema de autenticación con JWT para seguridad mejorada',
-        status: 'Hecho',
-        assignedTo: 'Juan',
-        priority: '1 - Urgente',
-        createdDate: new Date('2024-01-01'),
-        deadline: new Date('2024-01-05'),
-        creator: 'Super',
-        comments: [],
-        history: [],
-        groupId: 'equipo-dev'
-      },
-      {
-        id: '2',
-        title: 'Diseñar interfaz del dashboard',
-        description: 'Crear el diseño mockup del dashboard principal con figma',
-        status: 'En progreso',
-        assignedTo: 'Ana',
-        priority: '2 - Alta',
-        createdDate: new Date('2024-01-02'),
-        deadline: new Date('2024-01-10'),
-        creator: 'Super',
-        comments: [],
-        history: [],
-        groupId: 'ux'
-      },
-      {
-        id: '3',
-        title: 'Revisar código del módulo auth',
-        description: 'Revisar el código del módulo de autenticación y verificar seguridad',
-        status: 'Revisión',
-        assignedTo: 'María',
-        priority: '2 - Alta',
-        createdDate: new Date('2024-01-03'),
-        deadline: new Date('2024-01-08'),
-        creator: 'Super',
-        comments: [],
-        history: [],
-        groupId: 'equipo-dev'
-      },
-      {
-        id: '4',
-        title: 'Escribir tests unitarios',
-        description: 'Escribir tests unitarios para todos los componentes principales',
-        status: 'Pendiente',
-        assignedTo: 'Carlos',
-        priority: '3 - Media',
-        createdDate: new Date('2024-01-04'),
-        deadline: new Date('2024-01-15'),
-        creator: 'Super',
-        comments: [],
-        history: [],
-        groupId: 'qa'
-      },
-      {
-        id: '5',
-        title: 'Implementar gestión de permisos',
-        description: 'Crear sistema de permisos basado en roles para usuarios',
-        status: 'En progreso',
-        assignedTo: 'Juan',
-        priority: '1 - Urgente',
-        createdDate: new Date('2024-01-05'),
-        deadline: new Date('2024-01-12'),
-        creator: 'Super',
-        comments: [],
-        history: [],
-        groupId: 'equipo-dev'
-      },
-      {
-        id: '6',
-        title: 'Crear tickets API',
-        description: 'Implementar endpoints para la gestión de tickets (sin backend aún)',
-        status: 'Pendiente',
-        assignedTo: 'Juan',
-        priority: '2 - Alta',
-        createdDate: new Date('2024-01-06'),
-        deadline: new Date('2024-01-20'),
-        creator: 'María',
-        comments: [],
-        history: [],
-        groupId: 'equipo-dev'
-      },
-      {
-        id: '7',
-        title: 'Soporte para navegador legacy',
-        description: 'Implementar compatibilidad con navegadores antiguos',
-        status: 'Hecho',
-        assignedTo: 'Ana',
-        priority: '4 - Baja',
-        createdDate: new Date('2024-01-07'),
-        deadline: new Date('2024-01-18'),
-        creator: 'María',
-        comments: [],
-        history: [],
-        groupId: 'qa'
-      },
-      {
-        id: '8',
-        title: 'Reportes de gestión',
-        description: 'Crear reportes análiticos para managers y administradores',
-        status: 'En progreso',
-        assignedTo: 'Ana',
-        priority: '2 - Alta',
-        createdDate: new Date('2024-01-08'),
-        deadline: new Date('2024-01-25'),
-        creator: 'María',
-        comments: [],
-        history: [],
-        groupId: 'soporte'
-      },
-      {
-        id: '9',
-        title: 'Optimizar base de datos',
-        description: 'Optimizar queries y agregar índices para mejor rendimiento',
-        status: 'Pendiente',
-        assignedTo: '',
-        priority: '3 - Media',
-        createdDate: new Date('2024-01-09'),
-        deadline: new Date('2024-02-01'),
-        creator: 'Super',
-        comments: [],
-        history: [],
-        groupId: 'equipo-dev'
-      },
-      {
-        id: '10',
-        title: 'Documentación de API',
-        description: 'Documentar todas las APIs creadas',
-        status: 'Revisión',
-        assignedTo: 'Juan',
-        priority: '3 - Media',
-        createdDate: new Date('2024-01-10'),
-        deadline: new Date('2024-01-28'),
-        creator: 'María',
-        comments: [],
-        history: [],
-        groupId: 'soporte'
-      }
-    ];
+    return [];
   }
 
   getTickets(): Observable<Ticket[]> {
     return this.tickets$;
   }
+
 
   /**
    * Tickets explicitly created during session / by users.
@@ -247,7 +173,168 @@ export class TicketService {
     );
   }
 
+  /**
+   * Fetch tickets for a specific group from the server and update local store.
+   * Used when viewing a group's dashboard to ensure we load group-scoped tickets.
+   */
+  async fetchTicketsForGroup(groupId: string): Promise<void> {
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    if (!token) return;
+    try {
+      // Route ticket API calls through API Gateway
+      const API_BASE = 'http://127.0.0.1:3000';
+      const res = await fetch(`${API_BASE}/tickets?groupId=${encodeURIComponent(groupId)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) return;
+      const body = await res.json();
+      const data = body?.data || [];
+      const converted: Ticket[] = [];
+      for (const t of (data || [])) {
+        const names = await this.resolveNames(t);
+        converted.push({
+          ...t,
+          id: String(t.id),
+          groupId: String(t.group_id),
+          status: this.mapStatus(t.status),
+          createdDate: t.created_at ? new Date(t.created_at) : new Date(),
+          deadline: t.due_date ? new Date(t.due_date) : undefined,
+          assignedTo: names.assignedTo,
+          assigneeId: names.assigneeId,
+          creator: names.creator,
+          creatorId: names.creatorId
+        } as Ticket);
+      }
+      this.ticketsSubject.next(converted);
+    } catch (e) {
+      console.warn('[TicketService] fetchTicketsForGroup failed', e);
+    }
+  }
+
+  /**
+   * Fetch a single ticket by id from server and return converted Ticket.
+   * Also merges the ticket into the in-memory tickets list.
+   */
+  async getTicketById(id: string): Promise<Ticket | null> {
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    if (!token) return null;
+    try {
+      // Route ticket API calls through API Gateway
+      const API_BASE = 'http://127.0.0.1:3000';
+      const res = await fetch(`${API_BASE}/tickets/${encodeURIComponent(id)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) return null;
+      const body = await res.json();
+      const t = body?.data;
+      if (!t) return null;
+      const names = await this.resolveNames(t);
+      const converted = { ...t, id: String(t.id), groupId: String(t.group_id), status: this.mapStatus(t.status), createdDate: t.created_at ? new Date(t.created_at) : new Date(), deadline: t.due_date ? new Date(t.due_date) : undefined, assignedTo: names.assignedTo, assigneeId: names.assigneeId, creator: names.creator, creatorId: names.creatorId } as Ticket;
+      // parse history if present
+      const rawHistory = body?.history || [];
+      converted.history = converted.history || [];
+      for (const h of rawHistory) {
+        let parsed: any = null;
+        try { parsed = JSON.parse(h.detail); } catch (e) { parsed = null; }
+        const editorName = h.editor_name || h.editor_name || '';
+        const entry: HistoryEntry = {
+          id: String(h.id),
+          user: String(h.user_id || ''),
+          action: h.action || (parsed && parsed.changedFields ? `Updated ${parsed.changedFields.join(',')}` : 'Updated'),
+          date: h.created_at ? new Date(h.created_at) : new Date(),
+          before: parsed?.before || undefined,
+          after: parsed?.after || undefined,
+          editorName: editorName
+        } as HistoryEntry;
+        // also fill oldValue/newValue for backward display when detail is single-field
+        if (!entry.before && parsed && parsed.field) {
+          entry.field = parsed.field;
+          entry.oldValue = parsed.old !== undefined ? String(parsed.old) : undefined;
+          entry.newValue = parsed.new !== undefined ? String(parsed.new) : undefined;
+        }
+        converted.history.push(entry);
+      }
+      // merge into ticketsSubject if not present
+      const tickets = this.ticketsSubject.value.slice();
+      const idx = tickets.findIndex(x => String(x.id) === String(converted.id));
+      if (idx > -1) tickets[idx] = converted; else tickets.unshift(converted);
+      this.ticketsSubject.next(tickets);
+      return converted;
+    } catch (e) {
+      console.warn('[TicketService] getTicketById failed', e);
+      return null;
+    }
+  }
+
   updateTicket(ticket: Ticket): void {
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    if (token) {
+      const assignedToValue = (ticket.assigneeId && String(ticket.assigneeId).trim()) || (ticket.assignedTo ? String(ticket.assignedTo).trim() : '');
+      const assigned_to_payload = (/^\d+$/.test(assignedToValue) ? assignedToValue : null);
+      // map frontend status to backend token
+      const statusMap: any = { 'Pendiente': 'new', 'En progreso': 'in_progress', 'Revisión': 'review', 'Hecho': 'done' };
+      const normalizeDeadline = (d: any) => {
+        if (!d) return null;
+        if (d instanceof Date) return d.toISOString();
+        if (typeof d === 'string') {
+          // accept YYYY-MM-DD or full ISO
+          if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return new Date(d + 'T00:00:00Z').toISOString();
+          try { const parsed = new Date(d); if (!isNaN(parsed.getTime())) return parsed.toISOString(); } catch (e) {}
+        }
+        return d;
+      };
+
+      const bodyPayload: any = {
+        title: ticket.title,
+        description: ticket.description,
+        assigned_to: assigned_to_payload,
+        priority: ticket.priority,
+        deadline: normalizeDeadline(ticket.deadline),
+        status: statusMap[ticket.status] || 'new'
+      };
+
+      // Route ticket API calls through API Gateway
+      const API_BASE = 'http://127.0.0.1:3000';
+      fetch(`${API_BASE}/tickets/${encodeURIComponent(ticket.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(bodyPayload)
+      }).then(async res => {
+        if (!res.ok) throw new Error('Server error');
+        const body = await res.json();
+        const t = body?.data;
+        const names = await this.resolveNames(t);
+        const converted = { ...t, id: String(t.id), groupId: String(t.group_id), status: this.mapStatus(t.status), createdDate: t.created_at ? new Date(t.created_at) : new Date(), deadline: t.due_date ? new Date(t.due_date) : undefined, assignedTo: names.assignedTo, assigneeId: names.assigneeId, creator: names.creator, creatorId: names.creatorId } as Ticket;
+        // attach history entries returned by server (if any)
+        try {
+          const hist = body?.history || [];
+          converted.history = converted.history || [];
+          for (const h of hist) {
+            let parsedDetail: any = null;
+            try { parsedDetail = JSON.parse(h.detail); } catch (e) { parsedDetail = null; }
+            const entry: HistoryEntry = {
+              id: String(h.id),
+              user: String(h.user_id || h.user || ''),
+              action: h.action || parsedDetail?.action || `Changed ${parsedDetail?.field || ''}`,
+              field: parsedDetail?.field || undefined,
+              oldValue: parsedDetail?.old !== undefined ? String(parsedDetail.old) : undefined,
+              newValue: parsedDetail?.new !== undefined ? String(parsedDetail.new) : undefined,
+              date: h.created_at ? new Date(h.created_at) : new Date()
+            };
+            converted.history.push(entry);
+          }
+        } catch (e) {
+          // ignore history parse errors
+        }
+        const tickets = this.ticketsSubject.value.map(x => x.id === converted.id ? converted : x);
+        this.ticketsSubject.next(tickets);
+        // Ensure we have the authoritative ticket (with full history and canonical fields)
+        // by fetching the ticket again from the server. Do not block the UI.
+        try {
+          this.getTicketById(converted.id).catch(() => {});
+        } catch (e) {
+          // ignore
+        }
+      }).catch(e => console.warn('[TicketService] Failed to update ticket on server', e));
+      return;
+    }
+
     const tickets = this.ticketsSubject.value;
     const index = tickets.findIndex(t => t.id === ticket.id);
     if (index !== -1) {
@@ -300,7 +387,66 @@ export class TicketService {
     return String(value);
   }
 
-  addTicket(ticket: Ticket): void {
+  async addTicket(ticket: Ticket): Promise<Ticket> {
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    // If token present, create on server
+    if (token) {
+      try {
+        // normalize assigned_to: API expects a user id (numeric/string) or null
+        const assignedToValue = (ticket.assigneeId && String(ticket.assigneeId).trim()) || (ticket.assignedTo ? String(ticket.assignedTo).trim() : '');
+        const assigned_to_payload = (/^\d+$/.test(assignedToValue) ? assignedToValue : null);
+        const normalizeDeadline = (d: any) => {
+          if (!d) return null;
+          if (d instanceof Date) return d.toISOString();
+          if (typeof d === 'string') {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return new Date(d + 'T00:00:00Z').toISOString();
+            try { const parsed = new Date(d); if (!isNaN(parsed.getTime())) return parsed.toISOString(); } catch (e) {}
+          }
+          return d;
+        };
+        const statusMap: any = { 'Pendiente': 'new', 'En progreso': 'in_progress', 'Revisión': 'review', 'Hecho': 'done' };
+        const bodyPayload: any = {
+          title: ticket.title,
+          description: ticket.description,
+          group_id: ticket.groupId,
+          assigned_to: assigned_to_payload,
+          priority: ticket.priority,
+          deadline: normalizeDeadline(ticket.deadline),
+          status: statusMap[(ticket as any).status] || 'new'
+        };
+
+        // Route ticket API calls through API Gateway
+        const API_BASE = 'http://127.0.0.1:3000';
+        const res = await fetch(`${API_BASE}/tickets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(bodyPayload)
+        });
+        if (!res.ok) throw new Error('Server error');
+        const body = await res.json();
+        const t = body?.data;
+        const names = await this.resolveNames(t);
+        const converted = { ...t, id: String(t.id), groupId: String(t.group_id), status: this.mapStatus(t.status), createdDate: t.created_at ? new Date(t.created_at) : new Date(), deadline: t.due_date ? new Date(t.due_date) : undefined, assignedTo: names.assignedTo, assigneeId: names.assigneeId, creator: names.creator, creatorId: names.creatorId } as Ticket;
+        const tickets = this.ticketsSubject.value;
+        this.ticketsSubject.next([converted, ...tickets]);
+        // created list
+        const created = this.createdSubject.value;
+        this.createdSubject.next([converted, ...created]);
+        return converted;
+      } catch (e) {
+        console.warn('[TicketService] Failed to create ticket on server, falling back to local', e);
+        const tickets = this.ticketsSubject.value;
+        tickets.push(ticket);
+        this.saveTicketsToStorage(tickets);
+        this.ticketsSubject.next([...tickets]);
+        const created = this.createdSubject.value;
+        created.push(ticket);
+        this.saveCreatedToStorage(created);
+        this.createdSubject.next([...created]);
+        return ticket;
+      }
+    }
+    // local fallback
     const tickets = this.ticketsSubject.value;
     tickets.push(ticket);
     this.saveTicketsToStorage(tickets);
@@ -311,9 +457,23 @@ export class TicketService {
     created.push(ticket);
     this.saveCreatedToStorage(created);
     this.createdSubject.next([...created]);
+    return ticket;
   }
 
   deleteTicket(id: string): void {
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    if (token) {
+      const API_BASE = 'http://127.0.0.1:3000';
+      fetch(`${API_BASE}/tickets/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }).then(res => {
+        if (res.ok) {
+          const tickets = this.ticketsSubject.value.filter(t => t.id !== id);
+          this.ticketsSubject.next(tickets);
+          const created = this.createdSubject.value.filter(t => t.id !== id);
+          this.createdSubject.next(created);
+        }
+      }).catch(e => console.warn('[TicketService] Failed to delete ticket on server', e));
+      return;
+    }
     const tickets = this.ticketsSubject.value.filter(t => t.id !== id);
     this.saveTicketsToStorage(tickets);
     this.ticketsSubject.next(tickets);

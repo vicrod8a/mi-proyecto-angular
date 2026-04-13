@@ -8,6 +8,8 @@ export interface Group {
   description: string;
   memberCount: number;
   isMember: boolean;
+  membershipStatus?: 'owner' | 'member' | 'invited' | 'none';
+  ownerUserId?: string;
   level?: string;
   author?: string;
   members?: string;
@@ -21,8 +23,7 @@ export interface Group {
   providedIn: 'root'
 })
 export class GroupService {
-  private readonly STORAGE_KEY = 'mi-proyecto-groups';
-  private groupsSubject = new BehaviorSubject<Group[]>(this.loadGroupsFromStorage());
+  private groupsSubject = new BehaviorSubject<Group[]>([]);
   public groups$ = this.groupsSubject.asObservable();
 
   constructor(private userService: UserService) {
@@ -30,29 +31,44 @@ export class GroupService {
     this.userService.users$.subscribe(() => {
       this.updateGroupsMembership();
     });
+    // Fetch groups from backend on init
+    this.fetchGroupsFromServer();
   }
 
-  private loadGroupsFromStorage(): Group[] {
-    const stored = localStorage.getItem(this.STORAGE_KEY);
-    if (stored) {
-      try {
-        const groups = JSON.parse(stored);
-        console.log('[GroupService] Loaded groups from localStorage:', groups);
-        return groups;
-      } catch (e) {
-        console.warn('[GroupService] Error parsing stored groups:', e);
-      }
-    }
-    // Return default groups if nothing in storage
-    return this.getDefaultGroups();
-  }
-
-  private saveGroupsToStorage(groups: Group[]): void {
+  // Fetch groups from backend and update in-memory state
+  private async fetchGroupsFromServer(): Promise<void> {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
-      console.log('[GroupService] Saved groups to localStorage');
+      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const res = await fetch('http://127.0.0.1:3000/groups', {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const body = await res.json();
+        const data = body?.data || [];
+        const currentUser = this.userService.getCurrentUser();
+        const mapped: Group[] = data.map((g: any) => ({
+          id: String(g.id),
+          name: g.name,
+          description: g.description,
+          memberCount: g.member_count ?? 0,
+          membershipStatus: g.membership_status ?? 'none',
+          isMember: currentUser ? ( (g.membership_status === 'member' || g.membership_status === 'owner') || (Array.isArray(g.members_list) ? g.members_list.map(String).includes(String(currentUser.id)) : false) ) : false,
+          ownerUserId: g.owner_user_id ? String(g.owner_user_id) : undefined,
+          createdDate: g.created_at ? String(g.created_at).split('T')[0] : undefined,
+          invitationCode: g.invitation_code ?? undefined,
+          level: g.level ?? undefined,
+          membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : []
+        } as Group));
+        this.groupsSubject.next(mapped);
+      } else {
+        console.warn('[GroupService] Failed to fetch groups from server', res.status);
+        this.groupsSubject.next([]);
+      }
     } catch (e) {
-      console.warn('[GroupService] Error saving groups to localStorage:', e);
+      console.warn('[GroupService] Error fetching groups from server:', e);
+      this.groupsSubject.next([]);
     }
   }
 
@@ -62,99 +78,14 @@ export class GroupService {
       const currentGroups = this.groupsSubject.value;
       const updatedGroups = currentGroups.map(group => ({
         ...group,
-        isMember: group.membersList?.includes(currentUser.id) || false
+        isMember: group.membersList?.map(String).includes(String(currentUser.id)) || false
       }));
       this.groupsSubject.next(updatedGroups);
     }
   }
 
   private getDefaultGroups(): Group[] {
-    return [
-      {
-        id: 'equipo-dev',
-        name: 'Equipo Dev',
-        description: 'Equipo de desarrollo principal',
-        memberCount: 8,
-        isMember: false,
-        level: 'Avanzado',
-        author: 'Juan Pérez',
-        members: 'Juan, María, Carlos, Pedro',
-        tickets: 15,
-        createdDate: '2024-01-10',
-        invitationCode: 'DEV2024',
-        membersList: ['1', '2', '3', '5'] // SuperAdmin, Juan, María, Ana
-      },
-      {
-        id: 'soporte',
-        name: 'Soporte',
-        description: 'Equipo de soporte técnico',
-        memberCount: 5,
-        isMember: false,
-        level: 'Intermedio',
-        author: 'María García',
-        members: 'María, Pedro, Ana',
-        tickets: 22,
-        createdDate: '2024-01-15',
-        invitationCode: 'SUP2024',
-        membersList: ['1', '3'] // SuperAdmin, María
-      },
-      {
-        id: 'ux',
-        name: 'UX',
-        description: 'Equipo de experiencia de usuario',
-        memberCount: 4,
-        isMember: false,
-        level: 'Avanzado',
-        author: 'Ana López',
-        members: 'Ana, Luis, Carmen',
-        tickets: 8,
-        createdDate: '2024-02-01',
-        invitationCode: 'UX2024',
-        membersList: ['5'] // Ana
-      },
-      {
-        id: 'qa',
-        name: 'QA',
-        description: 'Equipo de control de calidad',
-        memberCount: 3,
-        isMember: false,
-        level: 'Intermedio',
-        author: 'Carlos Ruiz',
-        members: 'Carlos, Elena',
-        tickets: 12,
-        createdDate: '2024-02-10',
-        invitationCode: 'QA2024',
-        membersList: ['4'] // Carlos
-      },
-      {
-        id: 'marketing',
-        name: 'Marketing',
-        description: 'Equipo de marketing digital',
-        memberCount: 6,
-        isMember: false,
-        level: 'Básico',
-        author: 'Luis Martín',
-        members: 'Luis, Sofia, Miguel, Laura',
-        tickets: 18,
-        createdDate: '2024-02-20',
-        invitationCode: 'MKT2024',
-        membersList: [] // Sin miembros iniciales
-      },
-      {
-        id: 'ventas',
-        name: 'Ventas',
-        description: 'Equipo comercial',
-        memberCount: 7,
-        isMember: false,
-        level: 'Intermedio',
-        author: 'Miguel Torres',
-        members: 'Miguel, Laura, Roberto, Patricia',
-        tickets: 25,
-        createdDate: '2024-03-01',
-        invitationCode: 'VEN2024',
-        membersList: [] // Sin miembros iniciales
-      }
-    ];
+    return [];
   }
 
   getGroups(): Observable<Group[]> {
@@ -173,14 +104,27 @@ export class GroupService {
     return this.groupsSubject.value.find(group => group.id === id);
   }
 
-  async createGroup(group: Omit<Group, 'id' | 'isMember' | 'memberCount' | 'createdDate' | 'invitationCode' | 'membersList'>): Promise<void> {
+  async createGroup(group: Omit<Group, 'id' | 'isMember' | 'memberCount' | 'createdDate' | 'invitationCode' | 'membersList'>): Promise<Group> {
     // Try to create on server first; fall back to local-only behavior if network fails
     const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
-    const payload = { name: group.name, description: group.description };
+    const currentUser = this.userService.getCurrentUser();
+    const payload: any = { name: group.name, description: group.description };
+
+    if ((group as any).level) {
+      payload.level = (group as any).level;
+    }
+
+    // Always include owner_user_id when we have a current user so backend can reliably assign membership
+    // Allow form to override owner (ownerUserId) when provided; otherwise use current user
+    if ((group as any).ownerUserId) {
+      payload.owner_user_id = (group as any).ownerUserId;
+    } else if (currentUser) {
+      payload.owner_user_id = currentUser.id;
+    }
 
     try {
       if (token) {
-        const res = await fetch('http://127.0.0.1:3002/groups', {
+        const res = await fetch('http://127.0.0.1:3000/groups', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -198,16 +142,32 @@ export class GroupService {
               name: created.name,
               description: created.description,
               memberCount: created.member_count ?? 0,
-              isMember: false,
+              isMember: (currentUser && String(created.owner_user_id) === String(currentUser.id)) || false,
+              ownerUserId: created.owner_user_id ? String(created.owner_user_id) : undefined,
               createdDate: created.created_at ? created.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
               invitationCode: created.invitation_code ?? this.generateInvitationCode(),
-              membersList: created.members_list ?? []
+              level: created.level ?? payload.level ?? 'Básico',
+              membersList: Array.isArray(created.members_list) ? created.members_list.map(String) : (created.members_list ?? [])
             } as Group;
             const currentGroups = this.groupsSubject.value;
             const updated = [...currentGroups, newGroup];
-            this.saveGroupsToStorage(updated);
+            // update in-memory groups only (do not persist to localStorage)
             this.groupsSubject.next(updated);
-            return;
+            // If current user created the group, update their groups and mark membership
+            if (currentUser && String(created.owner_user_id) === String(currentUser.id)) {
+              try {
+                // update local user groups optimistically
+                this.userService.updateUser(currentUser.id, {
+                  groups: [...(currentUser.groups || []), String(created.id)]
+                });
+                // ensure membersList contains current user
+                newGroup.membersList = [...(newGroup.membersList || []), currentUser.id];
+                this.updateGroup(newGroup.id, { membersList: newGroup.membersList, memberCount: (newGroup.memberCount || 0) + 1 });
+              } catch (e) {
+                console.warn('[GroupService] Failed to update current user groups locally:', e);
+              }
+            }
+            return newGroup;
           }
         } else if (res.status === 409) {
           console.warn('[GroupService] Group name already exists');
@@ -218,81 +178,215 @@ export class GroupService {
         }
       }
     } catch (e) {
-      console.warn('[GroupService] Server create failed, falling back to local-only:', e);
+      console.warn('[GroupService] Server create failed:', e);
+      throw e;
     }
-
-    // Local-only fallback
-    const newGroup: Group = {
-      ...group,
-      id: this.generateId(),
-      isMember: false,
-      memberCount: 0,
-      createdDate: new Date().toISOString().split('T')[0],
-      invitationCode: this.generateInvitationCode(),
-      membersList: []
-    };
-    const currentGroups = this.groupsSubject.value;
-    const updated = [...currentGroups, newGroup];
-    this.saveGroupsToStorage(updated);
-    this.groupsSubject.next(updated);
+    // Should not reach here because successful path returns
+    throw new Error('Failed to create group');
   }
 
-  updateGroup(id: string, updates: Partial<Group>): void {
+  async updateGroup(id: string, updates: Partial<Group>): Promise<Group> {
+    // Optimistically update in-memory
     const currentGroups = this.groupsSubject.value;
     const index = currentGroups.findIndex(g => g.id === id);
+    let updatedGroup: Group | null = null;
     if (index > -1) {
       currentGroups[index] = { ...currentGroups[index], ...updates };
-      this.saveGroupsToStorage(currentGroups);
       this.groupsSubject.next([...currentGroups]);
+      updatedGroup = currentGroups[index];
+    }
+
+    try {
+      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const res = await fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ name: updates.name, description: updates.description, level: updates.level })
+      });
+      if (res.ok) {
+        const body = await res.json();
+        const g = body?.data;
+        if (g) {
+          const mapped: Group = {
+            id: String(g.id),
+            name: g.name,
+            description: g.description,
+            memberCount: g.member_count ?? (updatedGroup?.memberCount ?? 0),
+            isMember: updatedGroup?.isMember ?? false,
+            ownerUserId: g.owner_user_id ? String(g.owner_user_id) : updatedGroup?.ownerUserId,
+            createdDate: g.created_at ? String(g.created_at).split('T')[0] : updatedGroup?.createdDate,
+            invitationCode: g.invitation_code ?? updatedGroup?.invitationCode,
+            level: g.level ?? updatedGroup?.level,
+            membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : updatedGroup?.membersList ?? []
+          } as Group;
+          const all = this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x);
+          this.groupsSubject.next(all);
+          return mapped;
+        }
+      }
+      throw new Error(`Server returned ${res.status}`);
+    } catch (e) {
+      console.warn('[GroupService] Failed to persist group update to server:', e);
+      if (updatedGroup) return updatedGroup;
+      throw e;
     }
   }
 
-  deleteGroup(id: string): void {
-    const currentGroups = this.groupsSubject.value.filter(g => g.id !== id);
-    this.saveGroupsToStorage(currentGroups);
-    this.groupsSubject.next(currentGroups);
+  async deleteGroup(id: string): Promise<void> {
+    // Optimistically remove
+    const before = this.groupsSubject.value;
+    this.groupsSubject.next(before.filter(g => g.id !== id));
+    try {
+      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const res = await fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) {
+        // rollback
+        this.groupsSubject.next(before);
+        throw new Error(`Server returned ${res.status}`);
+      }
+    } catch (e) {
+      console.warn('[GroupService] Failed to delete group on server:', e);
+      // rollback
+      this.groupsSubject.next(before);
+      throw e;
+    }
   }
-
   joinGroup(groupId: string): void {
     const currentUser = this.userService.getCurrentUser();
-    if (currentUser && !this.isUserMemberOfGroup(currentUser.id, groupId)) {
-      const group = this.getGroupById(groupId);
-      if (group) {
-        // Add user to group's member list
-        const updatedGroup = {
-          ...group,
-          membersList: [...(group.membersList || []), currentUser.id],
-          memberCount: (group.memberCount || 0) + 1
-        };
-        this.updateGroup(groupId, updatedGroup);
-        
-        // Add group to user's groups
-        this.userService.updateUser(currentUser.id, {
-          groups: [...currentUser.groups, groupId]
-        });
-      }
+    if (!currentUser) return;
+    // optimistic
+    const group = this.getGroupById(groupId);
+    const before = this.groupsSubject.value;
+    if (group && !this.isUserMemberOfGroup(currentUser.id, groupId)) {
+      const updatedGroup = { ...group, membersList: [...(group.membersList || []), currentUser.id], memberCount: (group.memberCount || 0) + 1, isMember: true, membershipStatus: 'member' } as Group;
+      this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
+      this.userService.updateUser(currentUser.id, { groups: [...(currentUser.groups || []), groupId] });
+      // persist to backend
+      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ user_id: currentUser.id })
+      }).then(async res => {
+        if (res.ok) {
+          const body = await res.json();
+          const g = body?.data;
+          if (g) {
+            const mapped: Group = {
+              id: String(g.id),
+              name: g.name,
+              description: g.description,
+              memberCount: g.member_count ?? updatedGroup.memberCount,
+              membershipStatus: g.membership_status ?? 'none',
+              isMember: (g.membership_status === 'member' || g.membership_status === 'owner') || true,
+              ownerUserId: g.owner_user_id ? String(g.owner_user_id) : updatedGroup.ownerUserId,
+              createdDate: g.created_at ? String(g.created_at).split('T')[0] : updatedGroup.createdDate,
+              invitationCode: g.invitation_code ?? updatedGroup.invitationCode,
+              level: g.level ?? updatedGroup.level,
+              membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : updatedGroup.membersList
+            } as Group;
+            this.groupsSubject.next(this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x));
+          }
+        } else {
+          // rollback
+          this.groupsSubject.next(before);
+        }
+      }).catch(() => {
+        this.groupsSubject.next(before);
+      });
     }
   }
 
   leaveGroup(groupId: string): void {
     const currentUser = this.userService.getCurrentUser();
-    if (currentUser && this.isUserMemberOfGroup(currentUser.id, groupId)) {
+    if (!currentUser) return;
+    if (this.isUserMemberOfGroup(currentUser.id, groupId)) {
       const group = this.getGroupById(groupId);
-      if (group) {
-        // Remove user from group's member list
-        const updatedGroup = {
-          ...group,
-          membersList: (group.membersList || []).filter(id => id !== currentUser.id),
-          memberCount: Math.max(0, (group.memberCount || 0) - 1)
-        };
-        this.updateGroup(groupId, updatedGroup);
-        
-        // Remove group from user's groups
-        this.userService.updateUser(currentUser.id, {
-          groups: currentUser.groups.filter(id => id !== groupId)
-        });
-      }
+      if (!group) return;
+      const before = this.groupsSubject.value;
+      const updatedGroup = { ...group, membersList: (group.membersList || []).filter(id => id !== currentUser.id), memberCount: Math.max(0, (group.memberCount || 0) - 1), isMember: false, membershipStatus: 'none' } as Group;
+      this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
+      this.userService.updateUser(currentUser.id, { groups: (currentUser.groups || []).filter(id => id !== groupId) });
+      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(currentUser.id)}`, {
+        method: 'DELETE',
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      }).then(async res => {
+        if (res.ok) {
+          const body = await res.json();
+          const g = body?.data;
+          if (g) {
+            const mapped: Group = {
+              id: String(g.id),
+              name: g.name,
+              description: g.description,
+              memberCount: g.member_count ?? updatedGroup.memberCount,
+              membershipStatus: g.membership_status ?? 'none',
+              isMember: (g.membership_status === 'member' || g.membership_status === 'owner') || false,
+              ownerUserId: g.owner_user_id ? String(g.owner_user_id) : updatedGroup.ownerUserId,
+              createdDate: g.created_at ? String(g.created_at).split('T')[0] : updatedGroup.createdDate,
+              invitationCode: g.invitation_code ?? updatedGroup.invitationCode,
+              level: g.level ?? updatedGroup.level,
+              membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : updatedGroup.membersList
+            } as Group;
+            this.groupsSubject.next(this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x));
+          }
+        } else {
+          this.groupsSubject.next(before);
+        }
+      }).catch(() => {
+        this.groupsSubject.next(before);
+      });
     }
+  }
+
+  acceptInvitation(groupId: string): void {
+    const currentUser = this.userService.getCurrentUser();
+    if (!currentUser) return;
+    const group = this.getGroupById(groupId);
+    if (!group) return;
+    // optimistic
+    const before = this.groupsSubject.value;
+    const updatedGroup = { ...group, membersList: [...(group.membersList || []), currentUser.id], memberCount: (group.memberCount || 0) + 1, isMember: true, membershipStatus: 'member' } as Group;
+    this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
+    this.userService.updateUser(currentUser.id, { groups: [...(currentUser.groups || []), groupId] });
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ user_id: currentUser.id })
+    }).then(async res => {
+      if (res.ok) {
+        const body = await res.json();
+        const g = body?.data;
+        if (g) {
+          const mapped: Group = {
+            id: String(g.id),
+            name: g.name,
+            description: g.description,
+            memberCount: g.member_count ?? updatedGroup.memberCount,
+            membershipStatus: g.membership_status ?? 'member',
+            isMember: (g.membership_status === 'member' || g.membership_status === 'owner') || true,
+            ownerUserId: g.owner_user_id ? String(g.owner_user_id) : updatedGroup.ownerUserId,
+            createdDate: g.created_at ? String(g.created_at).split('T')[0] : updatedGroup.createdDate,
+            invitationCode: g.invitation_code ?? updatedGroup.invitationCode,
+            level: g.level ?? updatedGroup.level,
+            membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : updatedGroup.membersList
+          } as Group;
+          this.groupsSubject.next(this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x));
+        }
+      } else {
+        this.groupsSubject.next(before);
+      }
+    }).catch(() => this.groupsSubject.next(before));
   }
 
   generateInvitationCode(): string {
@@ -310,18 +404,48 @@ export class GroupService {
     return newCode;
   }
 
-  joinGroupByCode(invitationCode: string): boolean {
-    const group = this.groupsSubject.value.find(g => g.invitationCode === invitationCode);
-    if (group) {
-      this.joinGroup(group.id);
+  async joinGroupByCode(invitationCode: string): Promise<boolean> {
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    try {
+      const res = await fetch('http://127.0.0.1:3000/groups/join-by-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ code: invitationCode })
+      });
+      if (!res.ok) return false;
+      const body = await res.json();
+      const g = body?.data;
+      if (!g) return false;
+      const mapped: Group = {
+        id: String(g.id),
+        name: g.name,
+        description: g.description,
+        memberCount: g.member_count ?? 0,
+        membershipStatus: g.membership_status ?? 'member',
+        isMember: (g.membership_status === 'member' || g.membership_status === 'owner') || false,
+        ownerUserId: g.owner_user_id ? String(g.owner_user_id) : undefined,
+        createdDate: g.created_at ? String(g.created_at).split('T')[0] : undefined,
+        invitationCode: g.invitation_code ?? undefined,
+        level: g.level ?? undefined,
+        membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : []
+      } as Group;
+      // update or insert in local store
+      const exists = this.groupsSubject.value.find(x => String(x.id) === mapped.id);
+      if (exists) {
+        this.groupsSubject.next(this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x));
+      } else {
+        this.groupsSubject.next([...this.groupsSubject.value, mapped]);
+      }
       return true;
+    } catch (e) {
+      console.warn('[GroupService] joinGroupByCode failed', e);
+      return false;
     }
-    return false;
   }
 
   isUserMemberOfGroup(userId: string, groupId: string): boolean {
     const group = this.getGroupById(groupId);
-    return group?.membersList?.includes(userId) || false;
+    return group?.membersList?.map(String).includes(String(userId)) || false;
   }
 
   getGroupMembers(groupId: string): string[] {
@@ -330,42 +454,109 @@ export class GroupService {
   }
 
   addUserToGroup(userId: string, groupId: string): void {
+    // Use backend endpoint to add membership
     const group = this.getGroupById(groupId);
-    if (group && !this.isUserMemberOfGroup(userId, groupId)) {
-      const updatedGroup = {
-        ...group,
-        membersList: [...(group.membersList || []), userId],
-        memberCount: (group.memberCount || 0) + 1
-      };
-      this.updateGroup(groupId, updatedGroup);
-      
-      // Add group to user's groups
-      const user = this.userService.getUserById(userId);
-      if (user) {
-        this.userService.updateUser(userId, {
-          groups: [...user.groups, groupId]
-        });
+    if (!group || this.isUserMemberOfGroup(userId, groupId)) return;
+    const before = this.groupsSubject.value;
+    const updatedGroup = { ...group, membersList: [...(group.membersList || []), userId], memberCount: (group.memberCount || 0) + 1 } as Group;
+    this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ user_id: userId })
+    }).then(async res => {
+      if (res.ok) {
+        const body = await res.json();
+        const g = body?.data;
+          if (g) {
+          const mapped: Group = {
+            id: String(g.id),
+            name: g.name,
+            description: g.description,
+            memberCount: g.member_count ?? updatedGroup.memberCount,
+              membershipStatus: g.membership_status ?? 'none',
+              isMember: (g.membership_status === 'member' || g.membership_status === 'owner') || updatedGroup.isMember,
+            ownerUserId: g.owner_user_id ? String(g.owner_user_id) : updatedGroup.ownerUserId,
+            createdDate: g.created_at ? String(g.created_at).split('T')[0] : updatedGroup.createdDate,
+            invitationCode: g.invitation_code ?? updatedGroup.invitationCode,
+            level: g.level ?? updatedGroup.level,
+            membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : updatedGroup.membersList
+          } as Group;
+          this.groupsSubject.next(this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x));
+        }
+      } else {
+        this.groupsSubject.next(before);
       }
-    }
+    }).catch(() => this.groupsSubject.next(before));
   }
 
   removeUserFromGroup(userId: string, groupId: string): void {
     const group = this.getGroupById(groupId);
-    if (group && this.isUserMemberOfGroup(userId, groupId)) {
-      const updatedGroup = {
-        ...group,
-        membersList: (group.membersList || []).filter(id => id !== userId),
-        memberCount: Math.max(0, (group.memberCount || 0) - 1)
-      };
-      this.updateGroup(groupId, updatedGroup);
-      
-      // Remove group from user's groups
-      const user = this.userService.getUserById(userId);
-      if (user) {
-        this.userService.updateUser(userId, {
-          groups: user.groups.filter(id => id !== groupId)
-        });
+    if (!group || !this.isUserMemberOfGroup(userId, groupId)) return;
+    const before = this.groupsSubject.value;
+    const updatedGroup = { ...group, membersList: (group.membersList || []).filter(id => id !== userId), memberCount: Math.max(0, (group.memberCount || 0) - 1) } as Group;
+    this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
+    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+    }).then(async res => {
+      if (res.ok) {
+        const body = await res.json();
+        const g = body?.data;
+          if (g) {
+          const mapped: Group = {
+            id: String(g.id),
+            name: g.name,
+            description: g.description,
+            memberCount: g.member_count ?? updatedGroup.memberCount,
+              membershipStatus: g.membership_status ?? 'none',
+              isMember: (g.membership_status === 'member' || g.membership_status === 'owner') || this.isUserMemberOfGroup((this.userService.getCurrentUser()?.id || ''), String(g.id)),
+            ownerUserId: g.owner_user_id ? String(g.owner_user_id) : updatedGroup.ownerUserId,
+            createdDate: g.created_at ? String(g.created_at).split('T')[0] : updatedGroup.createdDate,
+            invitationCode: g.invitation_code ?? updatedGroup.invitationCode,
+            level: g.level ?? updatedGroup.level,
+            membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : updatedGroup.membersList
+          } as Group;
+          this.groupsSubject.next(this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x));
+        }
+      } else {
+        this.groupsSubject.next(before);
       }
+    }).catch(() => this.groupsSubject.next(before));
+  }
+
+  async transferOwner(groupId: string, newOwnerId: string): Promise<Group | null> {
+    try {
+      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const res = await fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/transfer-owner`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ new_owner_id: newOwnerId })
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const body = await res.json();
+      const g = body?.data;
+      if (!g) return null;
+      const mapped: Group = {
+        id: String(g.id),
+        name: g.name,
+        description: g.description,
+        memberCount: g.member_count ?? 0,
+        membershipStatus: g.membership_status ?? 'none',
+        isMember: (g.membership_status === 'member' || g.membership_status === 'owner') || this.isUserMemberOfGroup(this.userService.getCurrentUser()?.id || '', String(g.id)),
+        ownerUserId: g.owner_user_id ? String(g.owner_user_id) : undefined,
+        createdDate: g.created_at ? String(g.created_at).split('T')[0] : undefined,
+        invitationCode: g.invitation_code ?? undefined,
+        level: g.level ?? undefined,
+        membersList: Array.isArray(g.members_list) ? g.members_list.map(String) : []
+      } as Group;
+      this.groupsSubject.next(this.groupsSubject.value.map(x => x.id === mapped.id ? mapped : x));
+      return mapped;
+    } catch (e) {
+      console.warn('[GroupService] transferOwner failed', e);
+      return null;
     }
   }
 

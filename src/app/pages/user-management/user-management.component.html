@@ -246,36 +246,45 @@
           </small>
         </div>
 
+        <!-- role removed: managed via permissions, not via form -->
+
+        <!-- groups removed: not allowed in form -->
+
         <div class="form-field">
-          <label class="form-label">Rol *</label>
-          <select
-            formControlName="role"
-            class="form-select">
-            <option value="">Seleccione un rol</option>
-            <option value="Super Administrator">Super Administrator</option>
-            <option value="Project Manager">Project Manager</option>
-            <option value="Developer">Developer</option>
-            <option value="QA Engineer">QA Engineer</option>
-          </select>
-          <small class="form-error" *ngIf="userForm.get('role')?.invalid && userForm.get('role')?.touched">
-            Rol requerido
+          <label class="form-label">Teléfono</label>
+          <input pInputText formControlName="phone" class="form-input" placeholder="Teléfono">
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Dirección</label>
+          <input pInputText formControlName="address" class="form-input" placeholder="Dirección">
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Fecha de Nacimiento</label>
+          <input pInputText type="date" formControlName="birthDate" class="form-input">
+        </div>
+
+        <div class="form-field" *ngIf="!isEditing">
+          <label class="form-label">Contraseña *</label>
+          <div class="relative">
+            <input pInputText [type]="showPassword ? 'text' : 'password'" formControlName="password" class="form-input" placeholder="Contraseña">
+            <button type="button" class="absolute right-3 top-2 text-gray-500" (click)="togglePasswordVisibility()" aria-label="Mostrar contraseña">
+              <i [class]="showPassword ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+            </button>
+          </div>
+          <small class="form-error" *ngIf="userForm.get('password')?.invalid && userForm.get('password')?.touched">
+            La contraseña es requerida (mínimo 6 caracteres)
           </small>
         </div>
 
-        <div class="form-field col-span-2">
-          <label class="form-label">Grupos</label>
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-lg">
-            <div *ngFor="let group of availableGroups" class="flex items-center">
-              <input
-                type="checkbox"
-                [id]="group.value"
-                [checked]="isGroupSelected(group.value)"
-                (change)="toggleGroupSelection(group.value)"
-                class="permission-checkbox mr-3">
-              <label [for]="group.value" class="text-sm font-medium text-gray-700 cursor-pointer">
-                {{ group.label }}
-              </label>
-            </div>
+        <div class="form-field" *ngIf="!isEditing">
+          <label class="form-label">Confirmar Contraseña *</label>
+          <div class="relative">
+            <input pInputText [type]="showConfirmPassword ? 'text' : 'password'" formControlName="confirmPassword" class="form-input" placeholder="Confirmar contraseña">
+            <button type="button" class="absolute right-3 top-2 text-gray-500" (click)="toggleConfirmPasswordVisibility()" aria-label="Mostrar confirmar contraseña">
+              <i [class]="showConfirmPassword ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+            </button>
           </div>
         </div>
 
