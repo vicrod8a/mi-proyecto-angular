@@ -1,5 +1,6 @@
 import { Injectable, computed, signal, Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { getAuthToken } from './token.storage';
 import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -118,5 +119,62 @@ export class PermissionService {
    */
   hasPermissionSignal(permission: string): Signal<boolean> {
     return computed(() => this.hasPermission(permission));
+  }
+
+  /**
+   * Refresh permissions scoped to a specific group.
+   * Fetches permissions from the backend and applies global + group-scoped
+   * permissions that match the provided `groupId`.
+   */
+  async refreshPermissionsForGroup(groupId: string): Promise<void> {
+    try {
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
+      if (!token) return;
+      const API_BASE = 'http://127.0.0.1:3000';
+      // Prefer group-scoped endpoint if available
+      try {
+        const grpRes = await fetch(`${API_BASE}/groups/${encodeURIComponent(groupId)}/permissions`, { headers: { Authorization: `Bearer ${token}` } });
+        if (grpRes.ok) {
+          const grpBody = await grpRes.json().catch(() => null);
+          const arr = Array.isArray(grpBody) ? grpBody : (grpBody?.data || grpBody || []);
+          // Attempt to find permissions for current user stored in localStorage
+          const currentUserRaw = localStorage.getItem('mi-proyecto-current-user-obj');
+          let currentUserId: string | null = null;
+          try { currentUserId = currentUserRaw ? JSON.parse(currentUserRaw).id : null; } catch (e) { currentUserId = null; }
+          let permissions: string[] = [];
+          if (currentUserId) {
+            const entry = (arr || []).find((e: any) => String(e.user_id || e.userId || e.user_id) === String(currentUserId));
+            if (entry) {
+              if (Array.isArray(entry.permissions)) permissions = entry.permissions.slice();
+              else if (Array.isArray(entry.permisos)) permissions = entry.permisos.slice();
+            }
+          }
+          // If no per-user entry, the group endpoint may return aggregated rows; map any permission-like objects
+          if (!permissions.length) {
+            permissions = (arr || []).flatMap((e: any) => Array.isArray(e.permissions) ? e.permissions : (e.nombre ? [e.nombre] : []));
+          }
+          const filtered = (permissions || []).map((p: any) => p && (p.nombre || p.name || p.permission || p) ).filter(Boolean) as string[];
+          if (filtered.length) {
+            this.setPermissions(filtered);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore and fallback to users/permissions
+      }
+
+      // Fallback: query /users/permissions and filter by grupo_id (legacy)
+      const res = await fetch(`${API_BASE}/users/permissions`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const body = await res.json().catch(() => null);
+      const permsArr = Array.isArray(body) ? body : (body?.data || body || []);
+      const filtered = (permsArr || [])
+        .filter((p: any) => p && (p.grupo_id === null || p.grupo_id === undefined || String(p.grupo_id) === String(groupId) || String(p.group_id) === String(groupId)))
+        .map((p: any) => p.nombre || p.name || p.permission || p.id)
+        .filter(Boolean) as string[];
+      if (filtered.length) this.setPermissions(filtered);
+    } catch (e) {
+      console.warn('[PermissionService] refreshPermissionsForGroup failed', e);
+    }
   }
 }

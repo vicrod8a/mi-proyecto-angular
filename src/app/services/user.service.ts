@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import UserApiClient from './user.api.client';
 import { PermissionService } from './permission.service';
+import { setTokenCookie, getAuthToken, removeTokenCookie } from './token.storage';
 
 export interface User {
   id: string;
@@ -119,6 +120,7 @@ export class UserService {
       { id: 'ticket.create', name: 'Crear Tickets', description: 'Permite crear nuevos tickets', category: 'Tickets' },
       { id: 'ticket.read', name: 'Ver Tickets', description: 'Permite ver tickets existentes', category: 'Tickets' },
       { id: 'ticket.update', name: 'Editar Tickets', description: 'Permite editar tickets existentes', category: 'Tickets' },
+      { id: 'ticket.move', name: 'Mover Tickets', description: 'Permite mover tickets en vista Kanban', category: 'Tickets' },
       { id: 'ticket.delete', name: 'Eliminar Tickets', description: 'Permite eliminar tickets', category: 'Tickets' },
       { id: 'group.create', name: 'Crear Grupos', description: 'Permite crear nuevos grupos', category: 'Grupos' },
       { id: 'group.read', name: 'Ver Grupos', description: 'Permite ver grupos existentes', category: 'Grupos' },
@@ -160,7 +162,7 @@ export class UserService {
       const userPayload = envelope?.usuario || envelope?.user || envelope;
       if (token) {
         try {
-          localStorage.setItem(this.TOKEN_KEY, token);
+          setTokenCookie(token);
         } catch {}
       }
 
@@ -262,14 +264,14 @@ export class UserService {
 
   logout(): void {
     try {
-      localStorage.removeItem(this.TOKEN_KEY);
+      removeTokenCookie();
     } catch {}
     this.currentUserId = '';
     localStorage.removeItem(this.CURRENT_USER_KEY);
   }
 
   async syncUsers(): Promise<void> {
-    const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
+    const token = getAuthToken() || undefined;
     try {
       const resp = await this.api.getUsers(token);
       const envelope = resp && resp.data ? resp.data : resp;
@@ -463,6 +465,7 @@ export class UserService {
       // groups may be stored elsewhere; include if provided so backend can decide
       if ((userData as any).groups) payload.groups = (userData as any).groups;
       if ((userData as any).password) payload.password = (userData as any).password;
+      if ((userData as any).currentPassword) payload.current_password = (userData as any).currentPassword;
 
       const resp = await this.api.updateUser(id, payload, token);
       const envelope = resp && resp.data ? resp.data : resp;
@@ -501,19 +504,25 @@ export class UserService {
     }
   }
 
-  async deleteUser(id: string): Promise<void> {
+  async deleteUser(id: string, currentPassword?: string): Promise<boolean> {
     // optimistic local delete
     const currentUsers = this.usersSubject.value.filter((user) => user.id !== id);
     this.saveUsersToStorage(currentUsers);
     this.usersSubject.next(currentUsers);
 
     const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
-    if (!token) return;
+    if (!token) return true;
 
     try {
-      await this.api.deleteUser(id, token);
+      if (currentPassword) {
+        await this.api.deleteUserWithPassword(id, currentPassword, token);
+      } else {
+        await this.api.deleteUser(id, token);
+      }
+      return true;
     } catch (e) {
       console.warn('[UserService] deleteUser persist failed', e);
+      return false;
     }
   }
 
@@ -584,12 +593,15 @@ export class UserService {
       try {
         // Pass the raw input (id, name, or object) so backend can resolve
         await this.api.addPermission(userId, permissionInput, token);
-        // refresh canonical state
-        // Only refresh current-user state when modifying the logged-in user
+        // If this is a group-scoped permission (contains group_id), do not reload global permissions
+        const isGroupScoped = permissionInput && typeof permissionInput === 'object' && (permissionInput.group_id || permissionInput.groupId);
+        if (isGroupScoped) {
+          return true;
+        }
+        // refresh canonical state for global permission changes
         if (String(userId) === String(this.currentUserId)) {
           await this.setCurrentUser(userId);
         } else {
-          // Otherwise, fetch fresh users list without switching current user
           try { await this.syncUsers(); } catch (e) { /* ignore */ }
         }
         return true;
@@ -612,7 +624,7 @@ export class UserService {
    * Remove a single permission from a user and persist to backend when possible.
    * Returns true when the change was persisted or applied locally.
    */
-  async removePermissionFromUser(userId: string, permissionId: string): Promise<boolean> {
+  async removePermissionFromUser(userId: string, permissionId: string, groupId?: string): Promise<boolean> {
     const user = this.getUserById(userId);
     if (!user) return false;
     const newPerms = user.permissions.filter((p) => p !== permissionId);
@@ -620,8 +632,12 @@ export class UserService {
     const token = localStorage.getItem(this.TOKEN_KEY) || undefined;
     if (token) {
       try {
-        await this.api.removePermission(userId, permissionId, token);
-        // update local canonical state
+        await this.api.removePermission(userId, permissionId, token, groupId);
+        // If group-scoped deletion, avoid reloading global permissions
+        if (groupId) {
+          return true;
+        }
+        // update local canonical state for global permission changes
         if (String(userId) === String(this.currentUserId)) {
           await this.setCurrentUser(userId);
         } else {

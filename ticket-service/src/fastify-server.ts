@@ -22,6 +22,24 @@ fastify.register(cors, {
   allowedHeaders: ['Content-Type', 'Authorization']
 });
 
+// Global response hook: normalize to universal schema
+fastify.addHook('onSend', async (request, reply, payload) => {
+  try {
+    let parsed: any = payload;
+    if (typeof payload === 'string') {
+      try { parsed = JSON.parse(payload); } catch (e) { parsed = payload; }
+    }
+    if (parsed && typeof parsed === 'object' && parsed.statusCode && Object.prototype.hasOwnProperty.call(parsed, 'intOpCode')) {
+      return payload;
+    }
+    const status = reply.statusCode || 200;
+    const intOp = `SxTS${String(status)}`; // TS = Ticket Service
+    return JSON.stringify({ statusCode: status, intOpCode: intOp, data: parsed === undefined || parsed === '' ? null : parsed });
+  } catch (e) {
+    return payload;
+  }
+});
+
 function getJwtPayloadFromAuthHeader(authHeader: string | undefined): any | null {
   try {
     if (!authHeader) return null;
@@ -57,10 +75,20 @@ fastify.get('/tickets', async (request: any, reply) => {
   const groupId = request.query && request.query.groupId ? String(request.query.groupId) : null;
   try {
     if (groupId) {
-      // Only return tickets in the group that belong to the requesting user (creator only)
-      const { data, error } = await supabase.from('tickets').select('*').eq('group_id', groupId).eq('creator_user_id', userId).order('created_at', { ascending: false });
-      if (error) return reply.status(500).send({ success: false, message: error.message });
-      return reply.send({ success: true, data: data || [] });
+      // If requesting tickets for a group, ensure the requester is a member of the group,
+      // then return all tickets in the group (members should see group tickets, not only their own creations).
+      try {
+        const { data: gm, error: gmErr } = await supabase.from('group_members').select('role').eq('group_id', groupId).eq('user_id', userId).maybeSingle();
+        if (gmErr) return reply.status(500).send({ success: false, message: gmErr.message });
+        if (!gm) return reply.status(403).send({ success: false, message: 'Forbidden' });
+
+        const { data, error } = await supabase.from('tickets').select('*').eq('group_id', groupId).order('created_at', { ascending: false });
+        if (error) return reply.status(500).send({ success: false, message: error.message });
+        return reply.send({ success: true, data: data || [] });
+      } catch (e: any) {
+        fastify.log.error({ err: e }, 'List tickets for group error');
+        return reply.status(500).send({ success: false, message: 'Internal error' });
+      }
     } else {
       // list tickets the user created (only their own tickets)
       const { data, error } = await supabase.from('tickets').select('*').eq('creator_user_id', userId).order('created_at', { ascending: false });
@@ -83,9 +111,10 @@ fastify.get('/tickets/:id', async (request: any, reply) => {
     const { data, error } = await supabase.from('tickets').select('*').eq('id', id).maybeSingle();
     if (error) return reply.status(500).send({ success: false, message: error.message });
     if (!data) return reply.status(404).send({ success: false, message: 'Ticket not found' });
-    // check access: only the creator may view the ticket
+    // check access: allow creator or the assigned user to view the ticket
     const isCreator = Number(data.creator_user_id) === Number(userId);
-    if (!isCreator) return reply.status(403).send({ success: false, message: 'Forbidden' });
+    const isAssignee = Number(data.assignee_user_id || data.assigned_to || 0) === Number(userId);
+    if (!isCreator && !isAssignee) return reply.status(403).send({ success: false, message: 'Forbidden' });
 
     // fetch history rows and include editor name
     try {

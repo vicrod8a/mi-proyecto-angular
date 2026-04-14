@@ -104,8 +104,19 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   loadPermissions() {
     this.userService.getPermissions().subscribe(permissions => {
-      this.permissions = permissions;
-      this.permissionsByCategory = this.userService.getPermissionsByCategory();
+      // Exclude ticket-scoped permissions from the global user-permissions panel.
+      const filtered = (permissions || []).filter(p => !String(p.id).startsWith('ticket.'));
+      this.permissions = filtered;
+      // Build categories from filtered permissions
+      const byCat = (this.userService.getPermissionsByCategory() || {});
+      // Remove any ticket category if present
+      if (byCat['Tickets']) delete byCat['Tickets'];
+      // Also filter items inside categories to ensure ticket.* removed
+      Object.keys(byCat).forEach(cat => {
+        byCat[cat] = (byCat[cat] || []).filter((perm: any) => !String(perm.id).startsWith('ticket.'));
+        if (!byCat[cat] || byCat[cat].length === 0) delete byCat[cat];
+      });
+      this.permissionsByCategory = byCat;
     });
   }
 
@@ -208,6 +219,13 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         if (ok) {
           this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Permisos actualizados correctamente' });
           this.selectedUser = { ...this.selectedUser!, permissions: [...this.selectedPermissions] } as User;
+          // If the current logged-in user updated their own permissions, apply
+          // them globally now (after the user finishes interacting) to avoid
+          // triggering UI jumps while toggling individual checkboxes.
+          const current = this.userService.getCurrentUser();
+          if (current && current.id === this.selectedUser.id) {
+            this.permissionService.setPermissions([...this.selectedPermissions]);
+          }
         } else {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar permisos' });
         }
@@ -287,8 +305,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         const canonical = this.userService.getUserById(this.selectedUser.id)?.permissions || [];
         this.selectedPermissions = [...canonical];
         this.selectedUser = { ...this.selectedUser, permissions: [...canonical] } as User;
-        const currentUser = this.userService.getCurrentUser();
-        if (currentUser && currentUser.id === this.selectedUser.id) this.permissionService.setPermissions(canonical);
+        // Do not update PermissionService here to avoid mid-toggle re-renders.
       }
     } finally {
       this.savingPermissions = false;

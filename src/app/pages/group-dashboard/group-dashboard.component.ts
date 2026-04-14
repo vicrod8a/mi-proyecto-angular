@@ -5,6 +5,7 @@ import { TicketService } from '../../services/ticket.service';
 import { Ticket } from '../../models/ticket.model';
 import { TicketKanbanComponent } from '../ticket-kanban/ticket-kanban.component';
 import { TicketListComponent } from '../ticket-list/ticket-list.component';
+import { IfHasPermissionDirective } from '../../directives/if-has-permission.directive';
 import { PermissionService } from '../../services/permission.service';
 import { UserService, User } from '../../services/user.service';
 import { GroupService, Group } from '../../services/group.service';
@@ -23,6 +24,8 @@ import { FormsModule } from '@angular/forms';
     CommonModule,
     TicketKanbanComponent,
     TicketListComponent,
+    // permission directive used on buttons inside this template
+    IfHasPermissionDirective,
     DialogModule,
     ButtonModule,
     InputTextModule,
@@ -71,8 +74,16 @@ export class GroupDashboardComponent implements OnInit {
     );
 
     // react to group param changes
-    this.route.paramMap.subscribe(params => {
+    this.route.paramMap.subscribe(async params => {
       this.groupId = decodeURIComponent(params.get('id') || '');
+      // Refresh scoped permissions for this group (global + group-specific) BEFORE loading data
+      if (this.groupId && this.permissionService && typeof (this.permissionService as any).refreshPermissionsForGroup === 'function') {
+        try {
+          await (this.permissionService as any).refreshPermissionsForGroup(this.groupId);
+        } catch (e) {
+          // ignore refresh errors but proceed
+        }
+      }
       this.loadGroup();
       this.loadGroupTickets();
       this.loadGroupMembers();
@@ -85,18 +96,8 @@ export class GroupDashboardComponent implements OnInit {
       
       // Check if user can access this group
       if (this.group) {
-        const currentUser = this.userService.getCurrentUser();
-        const canAccess = this.group.isMember || this.permissionService.hasPermission('group.manage');
-        
-        if (!canAccess) {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Acceso denegado',
-            detail: 'No tienes permiso para acceder a este grupo'
-          });
-          this.router.navigate(['/home']);
-          return;
-        }
+        // do not block access to the group dashboard here; actions inside
+        // the dashboard are controlled by permission checks per-action.
       }
       
       this.groupName = this.group?.name || null;

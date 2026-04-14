@@ -40,7 +40,7 @@ export class LoginComponent {
     private permissionService: PermissionService
   ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
+      identifier: ['', [Validators.required]],
       password: ['', Validators.required]
     });
   }
@@ -55,8 +55,8 @@ export class LoginComponent {
       return;
     }
     this.loading = true;
-    const { email, password } = this.loginForm.value;
-    const result = await this.userService.login(email, password);
+    const { identifier, password } = this.loginForm.value;
+    const result = await this.userService.login(identifier, password);
     if (result.success) {
       this.messageService.add({
         severity: 'success',
@@ -74,5 +74,15 @@ export class LoginComponent {
       });
     }
     this.loading = false;
+  }
+
+  // Easter-egg: click logo 5 times to trigger alert
+  private logoClicks = 0;
+  logoClicked() {
+    this.logoClicks++;
+    if (this.logoClicks >= 5) {
+      alert('catch u');
+      this.logoClicks = 0;
+    }
   }
 }

@@ -4,6 +4,11 @@
     <p class="text-gray-600 text-lg">Cargando ticket...</p>
   </div>
 
+  <div *ngIf="!permissionService.hasPermissionSignal('ticket.read')() && !isLoading" class="text-center text-yellow-800 p-4 bg-yellow-50 rounded mb-4">
+    <p>No tienes permiso para ver este ticket.</p>
+    <button (click)="goBack()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">← Volver</button>
+  </div>
+
   <div *ngIf="ticketNotFound && !isLoading" class="text-center text-gray-600">
     <p>Ticket no encontrado.</p>
     <button (click)="goBack()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">← Volver</button>

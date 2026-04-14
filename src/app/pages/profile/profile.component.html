@@ -194,28 +194,28 @@
         <i class="pi pi-chart-bar text-blue-600"></i>
         Estadísticas de Cuenta
       </h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-blue-50 p-4 rounded-lg text-center">
-          <i class="pi pi-check-circle text-blue-600 text-2xl"></i>
-          <h4 class="font-semibold mt-2">Actividad</h4>
-          <p class="text-gray-600">125 acciones</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-blue-50 p-4 rounded-lg text-center">
+            <i class="pi pi-tasks text-blue-600 text-2xl"></i>
+            <h4 class="font-semibold mt-2">Tickets asignados</h4>
+            <p class="text-gray-600">{{ assignedTickets.length }}</p>
+          </div>
+          <div class="bg-green-50 p-4 rounded-lg text-center">
+            <i class="pi pi-plus-circle text-green-600 text-2xl"></i>
+            <h4 class="font-semibold mt-2">Tickets creados</h4>
+            <p class="text-gray-600">{{ stats.createdCount }}</p>
+          </div>
+          <div class="bg-yellow-50 p-4 rounded-lg text-center">
+            <i class="pi pi-comments text-yellow-600 text-2xl"></i>
+            <h4 class="font-semibold mt-2">Comentarios</h4>
+            <p class="text-gray-600">{{ stats.comments }}</p>
+          </div>
+          <div class="bg-purple-50 p-4 rounded-lg text-center">
+            <i class="pi pi-chart-line text-purple-600 text-2xl"></i>
+            <h4 class="font-semibold mt-2">Actividad</h4>
+            <p class="text-gray-600">{{ stats.activity }}</p>
+          </div>
         </div>
-        <div class="bg-green-50 p-4 rounded-lg text-center">
-          <i class="pi pi-comment text-green-600 text-2xl"></i>
-          <h4 class="font-semibold mt-2">Comentarios</h4>
-          <p class="text-gray-600">48 comentarios</p>
-        </div>
-        <div class="bg-yellow-50 p-4 rounded-lg text-center">
-          <i class="pi pi-flag text-yellow-600 text-2xl"></i>
-          <h4 class="font-semibold mt-2">Reportes</h4>
-          <p class="text-gray-600">12 reportes</p>
-        </div>
-        <div class="bg-purple-50 p-4 rounded-lg text-center">
-          <i class="pi pi-star text-purple-600 text-2xl"></i>
-          <h4 class="font-semibold mt-2">Calificación</h4>
-          <p class="text-gray-600">4.8/5.0</p>
-        </div>
-      </div>
     </div>
 
     <!-- Tickets Assigned Card -->
@@ -288,38 +288,47 @@
         Configuración de Cuenta
       </h3>
       <div class="space-y-4">
-        <div class="flex items-center justify-between py-4 border-b">
+        <div class="flex items-center justify-between py-4">
           <div>
             <h5 class="font-semibold">Cambiar Contraseña</h5>
             <p class="text-gray-500 text-sm">Actualiza tu contraseña regularmente para mantener tu cuenta segura</p>
           </div>
-          <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
+          <button (click)="openChangePassword()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
             <i class="pi pi-lock"></i>
             Cambiar
           </button>
         </div>
-        <div class="flex items-center justify-between py-4 border-b">
-          <div>
-            <h5 class="font-semibold">Notificaciones</h5>
-            <p class="text-gray-500 text-sm">Gestiona tus preferencias de notificaciones</p>
-          </div>
-          <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
-            <i class="pi pi-bell"></i>
-            Configurar
-          </button>
-        </div>
-        <div class="flex items-center justify-between py-4">
-          <div>
-            <h5 class="font-semibold">Privacidad</h5>
-            <p class="text-gray-500 text-sm">Controla quién puede ver tu perfil</p>
-          </div>
-          <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
-            <i class="pi pi-shield"></i>
-            Ajustar
-          </button>
-        </div>
       </div>
     </div>
+    <p-dialog header="Cambiar Contraseña" [(visible)]="showChangePasswordDialog" [modal]="true" [closable]="true" [style]="{width: '420px'}">
+      <div class="space-y-4">
+        <div>
+          <label class="block font-semibold text-gray-700 mb-2">Contraseña actual</label>
+          <input pInputText type="password" [(ngModel)]="cpCurrent" class="w-full border border-gray-300 rounded-lg p-2">
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-700 mb-2">Nueva contraseña</label>
+          <input pInputText type="password" [(ngModel)]="cpNew" class="w-full border border-gray-300 rounded-lg p-2">
+          <div class="mt-2 text-sm">
+            <ul class="space-y-1 text-gray-600">
+              <li [class.text-green-600]="passwordCriteria(cpNew).length">• Mínimo 8 caracteres</li>
+              <li [class.text-green-600]="passwordCriteria(cpNew).lower">• Al menos una minúscula</li>
+              <li [class.text-green-600]="passwordCriteria(cpNew).upper">• Al menos una mayúscula</li>
+              <li [class.text-green-600]="passwordCriteria(cpNew).digit">• Al menos un número</li>
+              <li [class.text-green-600]="passwordCriteria(cpNew).special">• Al menos un carácter especial</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-700 mb-2">Confirmar nueva contraseña</label>
+          <input pInputText type="password" [(ngModel)]="cpConfirm" class="w-full border border-gray-300 rounded-lg p-2">
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+          <button class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" (click)="showChangePasswordDialog = false">Cancelar</button>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg" (click)="changePassword()">Aceptar</button>
+        </div>
+      </div>
+    </p-dialog>
 
     <!-- Danger Zone Card -->
     <div class="bg-white rounded-xl shadow p-6 border-l-4 border-red-500">
@@ -332,13 +341,25 @@
           <h5 class="font-semibold">Eliminar Cuenta</h5>
           <p class="text-gray-500 text-sm">Elimina permanentemente tu cuenta y todos tus datos asociados. Esta acción no se puede deshacer.</p>
         </div>
-        <button 
-          (click)="deleteAccount()"
-          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
-          <i class="pi pi-trash"></i>
-          Eliminar
-        </button>
+          <button (click)="deleteAccount()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap ml-4">
+            <i class="pi pi-trash"></i>
+            Eliminar
+          </button>
       </div>
     </div>
+
+    <p-dialog header="Eliminar Cuenta" [(visible)]="showDeleteDialog" [modal]="true" [closable]="true" [style]="{width: '420px'}">
+      <div class="space-y-4">
+        <p class="text-gray-700">Para confirmar la eliminación, ingresa tu contraseña actual. Esta acción no podrá deshacerse.</p>
+        <div>
+          <label class="block font-semibold text-gray-700 mb-2">Contraseña</label>
+          <input pInputText type="password" [(ngModel)]="deletePassword" class="w-full border border-gray-300 rounded-lg p-2">
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+          <button class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" (click)="showDeleteDialog = false">Cancelar</button>
+          <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg" (click)="confirmDeleteAccount()">Eliminar</button>
+        </div>
+      </div>
+    </p-dialog>
   </div>
 </div>

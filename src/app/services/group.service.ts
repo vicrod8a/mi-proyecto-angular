@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { UserService } from './user.service';
+import { getAuthToken } from './token.storage';
 
 export interface Group {
   id: string;
@@ -38,7 +39,7 @@ export class GroupService {
   // Fetch groups from backend and update in-memory state
   private async fetchGroupsFromServer(): Promise<void> {
     try {
-      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
       const res = await fetch('http://127.0.0.1:3000/groups', {
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -46,7 +47,17 @@ export class GroupService {
       });
       if (res.ok) {
         const body = await res.json();
-        const data = body?.data || [];
+        // normalize possible shapes: direct array, { data: [...] }, nested wrappers like { statusCode:..., data: { success:true, data: [...] }}
+        let data: any = body?.data ?? body;
+        // unwrap one nested layer if present (e.g., gateway wrapping: { statusCode..., data: { success, data: [...] } })
+        if (data && typeof data === 'object' && (Array.isArray(data.data) || Array.isArray(data.items) || Array.isArray(data.value))) {
+          data = data.data ?? data.items ?? data.value;
+        }
+        if (!Array.isArray(data)) {
+          if (Array.isArray(body)) data = body;
+          else if (body && Array.isArray(body.items)) data = body.items;
+          else data = [];
+        }
         const currentUser = this.userService.getCurrentUser();
         const mapped: Group[] = data.map((g: any) => ({
           id: String(g.id),
@@ -106,7 +117,7 @@ export class GroupService {
 
   async createGroup(group: Omit<Group, 'id' | 'isMember' | 'memberCount' | 'createdDate' | 'invitationCode' | 'membersList'>): Promise<Group> {
     // Try to create on server first; fall back to local-only behavior if network fails
-    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
     const currentUser = this.userService.getCurrentUser();
     const payload: any = { name: group.name, description: group.description };
 
@@ -123,6 +134,34 @@ export class GroupService {
     }
 
     try {
+      // Client-side pre-check: fetch existing groups to avoid server 409 when name already exists
+      if (token) {
+        try {
+          const preview = await fetch('http://127.0.0.1:3000/groups', {
+            headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+          });
+          if (preview.ok) {
+            const pbody = await preview.json().catch(() => null);
+            let existing: any[] = [];
+            if (Array.isArray(pbody)) existing = pbody;
+            else if (pbody && Array.isArray(pbody.data)) existing = pbody.data;
+            else if (pbody && Array.isArray(pbody.items)) existing = pbody.items;
+            else if (pbody && Array.isArray(pbody.value)) existing = pbody.value;
+            if (existing.some(e => String(e.name).toLowerCase() === String(group.name).toLowerCase())) {
+              console.warn('[GroupService] Group name already exists (client check)');
+              // Refresh local groups so UI shows the existing group immediately
+              try {
+                await this.fetchGroupsFromServer();
+              } catch (_) {
+                // ignore errors while refreshing
+              }
+              throw new Error('Group name already exists');
+            }
+          }
+        } catch (e) {
+          // ignore preview errors and proceed to attempt creation (server will still validate)
+        }
+      }
       if (token) {
         const res = await fetch('http://127.0.0.1:3000/groups', {
           method: 'POST',
@@ -171,6 +210,14 @@ export class GroupService {
           }
         } else if (res.status === 409) {
           console.warn('[GroupService] Group name already exists');
+          // Conflict: refresh groups from server and return existing group when possible
+          try {
+            await this.fetchGroupsFromServer();
+            const existing = this.groupsSubject.value.find(g => String(g.name).toLowerCase() === String(group.name).toLowerCase());
+            if (existing) return existing;
+          } catch (e) {
+            // ignore refresh errors
+          }
           throw new Error('Group name already exists');
         } else {
           console.warn('[GroupService] Server returned', res.status);
@@ -185,6 +232,21 @@ export class GroupService {
     throw new Error('Failed to create group');
   }
 
+  async addPermissionToUserInGroup(userId: string, groupId: string, permission: string): Promise<boolean> {
+    try {
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
+      const res = await fetch(`http://127.0.0.1:3003/groups/${encodeURIComponent(groupId)}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ user_id: userId, permission })
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('[GroupService] addPermissionToUserInGroup failed', e);
+      return false;
+    }
+  }
+
   async updateGroup(id: string, updates: Partial<Group>): Promise<Group> {
     // Optimistically update in-memory
     const currentGroups = this.groupsSubject.value;
@@ -197,7 +259,7 @@ export class GroupService {
     }
 
     try {
-      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
       const res = await fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: {
@@ -240,7 +302,7 @@ export class GroupService {
     const before = this.groupsSubject.value;
     this.groupsSubject.next(before.filter(g => g.id !== id));
     try {
-      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
       const res = await fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(id)}`, {
         method: 'DELETE',
         headers: {
@@ -270,7 +332,7 @@ export class GroupService {
       this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
       this.userService.updateUser(currentUser.id, { groups: [...(currentUser.groups || []), groupId] });
       // persist to backend
-      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
       fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
@@ -315,7 +377,7 @@ export class GroupService {
       const updatedGroup = { ...group, membersList: (group.membersList || []).filter(id => id !== currentUser.id), memberCount: Math.max(0, (group.memberCount || 0) - 1), isMember: false, membershipStatus: 'none' } as Group;
       this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
       this.userService.updateUser(currentUser.id, { groups: (currentUser.groups || []).filter(id => id !== groupId) });
-      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
       fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(currentUser.id)}`, {
         method: 'DELETE',
         headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
@@ -358,7 +420,7 @@ export class GroupService {
     const updatedGroup = { ...group, membersList: [...(group.membersList || []), currentUser.id], memberCount: (group.memberCount || 0) + 1, isMember: true, membershipStatus: 'member' } as Group;
     this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
     this.userService.updateUser(currentUser.id, { groups: [...(currentUser.groups || []), groupId] });
-    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
     fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
@@ -405,7 +467,7 @@ export class GroupService {
   }
 
   async joinGroupByCode(invitationCode: string): Promise<boolean> {
-    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
     try {
       const res = await fetch('http://127.0.0.1:3000/groups/join-by-code', {
         method: 'POST',
@@ -460,7 +522,7 @@ export class GroupService {
     const before = this.groupsSubject.value;
     const updatedGroup = { ...group, membersList: [...(group.membersList || []), userId], memberCount: (group.memberCount || 0) + 1 } as Group;
     this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
-    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
     fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
@@ -497,7 +559,7 @@ export class GroupService {
     const before = this.groupsSubject.value;
     const updatedGroup = { ...group, membersList: (group.membersList || []).filter(id => id !== userId), memberCount: Math.max(0, (group.memberCount || 0) - 1) } as Group;
     this.groupsSubject.next(this.groupsSubject.value.map(g => g.id === groupId ? updatedGroup : g));
-    const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+    const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
     fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`, {
       method: 'DELETE',
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
@@ -529,7 +591,7 @@ export class GroupService {
 
   async transferOwner(groupId: string, newOwnerId: string): Promise<Group | null> {
     try {
-      const token = localStorage.getItem('mi-proyecto-token') || localStorage.getItem('supabase.auth.token');
+      const token = getAuthToken() || localStorage.getItem('supabase.auth.token');
       const res = await fetch(`http://127.0.0.1:3000/groups/${encodeURIComponent(groupId)}/transfer-owner`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },

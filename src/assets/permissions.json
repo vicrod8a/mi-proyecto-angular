@@ -3,14 +3,15 @@
     "ticket.create",
     "ticket.read",
     "ticket.update",
-    "ticket.delete"
+    "ticket.delete",
+    "ticket.move"
   ],
   "groups": [
     "group.create",
     "group.read",
     "group.update",
-    "group.delete",
-    "group.manage"
+    "group.manage",
+    "group.delete"
   ],
   "users": [
     "user.create",

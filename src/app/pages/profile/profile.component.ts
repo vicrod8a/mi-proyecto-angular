@@ -43,6 +43,20 @@ export class ProfileComponent implements OnInit {
     revisión: 0,
     hecho: 0
   };
+  // account statistics derived from system
+  stats = {
+    activity: 0,
+    comments: 0,
+    reports: 0,
+    rating: 0,
+    createdCount: 0
+  };
+
+  // change password dialog state
+  showChangePasswordDialog = false;
+  cpCurrent: string = '';
+  cpNew: string = '';
+  cpConfirm: string = '';
 
   constructor(
     public sidebarService: SidebarService,
@@ -63,6 +77,25 @@ export class ProfileComponent implements OnInit {
       this.loadAssignedTickets();
     });
     this.loadAssignedTickets();
+    // track created tickets to compute stats (only those created by current user)
+    this.ticketService.getCreatedTickets().subscribe(created => {
+      try {
+        const uid = this.user?.id ? String(this.user.id) : null;
+        if (!uid) {
+          this.stats.createdCount = 0;
+          return;
+        }
+        this.stats.createdCount = (created || []).filter(t => {
+          try {
+            if (t.creatorId && String(t.creatorId) === uid) return true;
+            if (t.creator && (String(t.creator) === uid || String(t.creator) === this.user?.username || String(t.creator) === this.user?.firstName)) return true;
+            return false;
+          } catch (e) { return false; }
+        }).length;
+      } catch (e) {
+        this.stats.createdCount = (created || []).length;
+      }
+    });
   }
 
   loadAssignedTickets() {
@@ -71,11 +104,21 @@ export class ProfileComponent implements OnInit {
       return;
     }
     
+    // derive assigned tickets by comparing user id to creator/assignee ids when available
     this.ticketService.getTickets().subscribe(tickets => {
-      this.assignedTickets = tickets.filter(ticket => 
-        ticket.assignedTo === this.user?.firstName || ticket.creator === this.user?.username
-      );
+      const uid = this.user?.id ? String(this.user.id) : null;
+      this.assignedTickets = (tickets || []).filter(ticket => {
+        try {
+          if (ticket.assigneeId && uid && String(ticket.assigneeId) === uid) return true;
+          if (ticket.creatorId && uid && String(ticket.creatorId) === uid) return true;
+          // fallback to name-based comparison
+          if (ticket.assignedTo === this.user?.firstName) return true;
+          if (ticket.creator === this.user?.username) return true;
+          return false;
+        } catch (e) { return false; }
+      });
       this.updateTicketSummary();
+      this.updateAccountStats(tickets || []);
     });
   }
 
@@ -92,6 +135,23 @@ export class ProfileComponent implements OnInit {
         this.ticketSummary[status as keyof typeof this.ticketSummary]++;
       }
     });
+  }
+
+  updateAccountStats(allTickets: Ticket[]) {
+    // activity: number of tickets the user interacted with (created + assigned)
+    const uid = this.user?.id ? String(this.user.id) : null;
+    // compute comments and history counts across assignedTickets
+    let comments = 0;
+    let historyCount = 0;
+    for (const t of this.assignedTickets) {
+      if (Array.isArray(t.comments)) comments += t.comments.length;
+      if (Array.isArray(t.history)) historyCount += t.history.length;
+    }
+    this.stats.comments = comments;
+    this.stats.activity = historyCount + (this.assignedTickets.length || 0);
+    // reports + rating are not implemented server-side; keep placeholders
+    this.stats.reports = 0;
+    this.stats.rating = 0;
   }
 
   openTicketDetail(ticket: Ticket) {
@@ -121,6 +181,73 @@ export class ProfileComponent implements OnInit {
     })();
   }
 
+  openChangePassword() {
+    this.cpCurrent = '';
+    this.cpNew = '';
+    this.cpConfirm = '';
+    this.showChangePasswordDialog = true;
+  }
+
+  passwordCriteria(pw: string) {
+    const s = pw || '';
+    return {
+      length: s.length >= 8,
+      lower: /[a-z]/.test(s),
+      upper: /[A-Z]/.test(s),
+      digit: /\d/.test(s),
+      special: /[^A-Za-z0-9]/.test(s)
+    };
+  }
+
+  passwordValidationErrors(pw: string) {
+    const c = this.passwordCriteria(pw);
+    const errs: string[] = [];
+    if (!c.length) errs.push('Mínimo 8 caracteres');
+    if (!c.lower) errs.push('Al menos una minúscula');
+    if (!c.upper) errs.push('Al menos una mayúscula');
+    if (!c.digit) errs.push('Al menos un número');
+    if (!c.special) errs.push('Al menos un carácter especial');
+    return errs;
+  }
+
+  async changePassword() {
+    if (!this.user || !this.user.id) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Usuario no identificado' });
+      return;
+    }
+
+    // validate
+    if (!this.cpCurrent || !this.cpNew || !this.cpConfirm) {
+      this.messageService.add({ severity: 'warn', summary: 'Campos incompletos', detail: 'Rellena todos los campos' });
+      return;
+    }
+
+    if (this.cpNew !== this.cpConfirm) {
+      this.messageService.add({ severity: 'warn', summary: 'Contraseñas no coinciden', detail: 'La nueva contraseña y su confirmación deben coincidir' });
+      return;
+    }
+
+    const errs = this.passwordValidationErrors(this.cpNew || '');
+    if (errs.length) {
+      this.messageService.add({ severity: 'warn', summary: 'Contraseña débil', detail: errs.join(', ') });
+      return;
+    }
+
+    try {
+      const ok = await this.profileService.updateUser({ id: this.user.id, password: this.cpNew, currentPassword: this.cpCurrent });
+      if (ok) {
+        this.messageService.add({ severity: 'success', summary: 'Contraseña actualizada', detail: 'Tu contraseña ha sido actualizada' });
+        this.showChangePasswordDialog = false;
+        this.cpCurrent = this.cpNew = this.cpConfirm = '';
+      } else {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar la contraseña en el servidor. Se intentó guardar localmente.' });
+      }
+    } catch (e) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error inesperado al actualizar contraseña' });
+    }
+  }
+  
+
   saveProfile() {
     if (!this.editingUser) return;
     // Set full name into first/last
@@ -148,10 +275,9 @@ export class ProfileComponent implements OnInit {
     const pw = (this.editingUser.password || '').trim();
     const cpw = (this.editingUser.confirmPassword || '').trim();
     if (pw) {
-      // Requerir mínimo 8 caracteres, mayúscula, minúscula, dígito y carácter especial
-      const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-      if (!pwRegex.test(pw)) {
-        this.messageService.add({ severity: 'warn', summary: 'Contraseña débil', detail: 'La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y un caracter especial', styleClass: 'custom-toast' });
+      const errs = this.passwordValidationErrors(pw);
+      if (errs.length) {
+        this.messageService.add({ severity: 'warn', summary: 'Contraseña débil', detail: errs.join(', '), styleClass: 'custom-toast' });
         return;
       }
       if (pw !== cpw) {
@@ -188,23 +314,36 @@ export class ProfileComponent implements OnInit {
   }
 
   deleteAccount() {
-    this.confirmationService.confirm({
-      message: '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.',
-      header: 'Confirmar eliminación de cuenta',
-      icon: 'pi pi-exclamation-triangle',
-      accept: () => {
-        this.profileService.deleteUser();
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Cuenta eliminada correctamente',
-          styleClass: 'custom-toast'
-        });
-        
-        setTimeout(() => {
-          this.router.navigate(['/login']);
-        }, 2000);
-      }
-    });
+    // open password prompt dialog for deletion
+    this.openDeleteDialog();
+  }
+
+  // delete dialog state
+  showDeleteDialog = false;
+  deletePassword = '';
+
+  openDeleteDialog() {
+    this.deletePassword = '';
+    this.showDeleteDialog = true;
+  }
+
+  async confirmDeleteAccount() {
+    if (!this.user || !this.user.id) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Usuario no identificado' });
+      return;
+    }
+    if (!this.deletePassword) {
+      this.messageService.add({ severity: 'warn', summary: 'Contraseña requerida', detail: 'Ingresa tu contraseña para confirmar eliminación' });
+      return;
+    }
+
+    const ok = await this.profileService.deleteUser(this.deletePassword);
+    if (ok) {
+      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Cuenta eliminada correctamente', styleClass: 'custom-toast' });
+      this.showDeleteDialog = false;
+      setTimeout(() => this.router.navigate(['/login']), 1200);
+    } else {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la cuenta. Revisa tu contraseña.' });
+    }
   }
 }

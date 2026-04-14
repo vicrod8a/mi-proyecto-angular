@@ -8,6 +8,7 @@ import { QuickFiltersComponent, QuickFilter } from '../../components/quick-filte
 import { UserService } from '../../services/user.service';
 import { MessageService } from 'primeng/api';
 import { IfHasPermissionDirective } from '../../directives/if-has-permission.directive';
+import { PermissionService } from '../../services/permission.service';
 
 @Component({
   selector: 'app-ticket-list',
@@ -38,6 +39,7 @@ export class TicketListComponent implements OnInit, OnChanges {
     private router: Router,
     private userService: UserService,
     private messageService: MessageService
+    , public permissionService: PermissionService
   ) {
     const currentUser = this.userService.getCurrentUser();
     this.currentUserName = currentUser?.firstName || '';
@@ -55,7 +57,12 @@ export class TicketListComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['groupId']) {
-      this.loadTickets();
+      (async () => {
+        try {
+          if (this.groupId) await this.permissionService.refreshPermissionsForGroup(this.groupId);
+        } catch (e) {}
+        this.loadTickets();
+      })();
     }
   }
 
@@ -156,10 +163,16 @@ export class TicketListComponent implements OnInit, OnChanges {
   }
 
   canDelete(ticket: Ticket): boolean {
+    // user must both have global/group-scoped delete permission and satisfy ticket-level rules (creator or admin)
+    if (!this.permissionService.hasPermission('ticket.delete')) return false;
     return this.ticketService.canDelete(ticket);
   }
 
   editTicket(ticket: Ticket): void {
+    if (!this.permissionService.hasPermission('ticket.update')) {
+      this.messageService.add({ severity: 'warn', summary: 'No permitido', detail: 'No tienes permiso para editar tickets' });
+      return;
+    }
     const group = this.groupId ? encodeURIComponent(this.groupId) : 'test-group';
     this.router.navigate(['/group', group, 'ticket', ticket.id, 'edit']);
   }

@@ -16,18 +16,26 @@ export class UsersService {
       permisosGlobales = perms?.map((p: any) => p.nombre) || [];
     }
 
-    // Permisos de grupo
+    // Permisos de grupo - soportar dos esquemas: `grupo_usuario_permisos` y `permisos_grupo`
     const { data: grupoPerm } = await supabase
       .from('grupo_usuario_permisos')
       .select('permiso_id, permisos(nombre)')
       .eq('usuario_id', user.id);
 
-    const permisosGrupo = grupoPerm
+    const permisosGrupoA = grupoPerm
       ?.map((gp: any) => gp.permisos?.nombre)
       .filter(Boolean) || [];
 
+    // tabla alternativa donde se guardan permisos por grupo (permission = nombre del permiso)
+    const { data: grupoPermAlt } = await supabase
+      .from('permisos_grupo')
+      .select('permission')
+      .eq('user_id', user.id);
+
+    const permisosGrupoB = grupoPermAlt?.map((g: any) => g.permission).filter(Boolean) || [];
+
     // Combinar globales + grupo sin duplicados
-    const permissions = [...new Set([...permisosGlobales, ...permisosGrupo])];
+    const permissions = [...new Set([...permisosGlobales, ...permisosGrupoA, ...permisosGrupoB])];
 
     // Grupos del usuario
     const { data: grupos } = await supabase
@@ -94,6 +102,20 @@ export class UsersService {
       scope:        gp.permisos?.scope,
       grupo_id:     gp.grupo_id,
       grupo_nombre: gp.grupos?.nombre,
+    }));
+
+    // También aceptar el esquema alternativo `permisos_grupo` (permission = nombre del permiso)
+    const { data: grupoPermAlt } = await supabase
+      .from('permisos_grupo')
+      .select('permission, group_id, groups(nombre)')
+      .eq('user_id', userId);
+
+    grupoPermAlt?.forEach((gp: any) => permisos.push({
+      permiso_id:   null,
+      nombre:       gp.permission,
+      scope:        'group',
+      grupo_id:     gp.group_id,
+      grupo_nombre: gp.groups?.nombre || null,
     }));
 
     return permisos;

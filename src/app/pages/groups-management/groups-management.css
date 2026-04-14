@@ -248,6 +248,112 @@ textarea.form-control {
   gap: 0.75rem;
 }
 
+/* Permissions editor styles */
+.permissions-editor {
+  margin-top: 1rem;
+  background: #ffffff;
+  border: 1px solid #e6eef8;
+  padding: 1rem 1.25rem;
+  border-radius: 0.5rem;
+}
+
+.permissions-editor h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.permissions-editor p {
+  margin: 0 0 0.5rem 0;
+  color: #374151;
+  font-weight: 600;
+}
+
+.perm-list {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 0.75rem 0;
+}
+
+.perm-list label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.375rem;
+  background: #f8fafc;
+  border: 1px solid #e6eef8;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+  font-size: 0.9rem;
+  color: #111827;
+}
+
+.perm-list label:hover {
+  background: #eef6ff;
+  border-color: #cfe6ff;
+}
+
+.perm-list input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.perm-actions {
+  margin-top: 0.75rem;
+}
+
+.perm-actions .btn {
+  padding: 0.35rem 0.75rem;
+}
+
+/* small responsive tweaks */
+@media (max-width: 640px) {
+  .perm-list {
+    gap: 0.5rem;
+  }
+  .group-card {
+    padding: 1rem;
+  }
+}
+
+/* Dropdown (select) styling */
+select.form-control,
+.permissions-editor select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #ffffff;
+  background-image: linear-gradient(45deg, transparent 50%, #3b82f6 50%), linear-gradient(135deg, #3b82f6 50%, transparent 50%), linear-gradient(#ffffff, #ffffff);
+  background-position: calc(100% - 1.1rem) calc(1rem + 2px), calc(100% - 0.8rem) calc(1rem + 2px), 0 0;
+  background-size: 8px 8px, 8px 8px, 100% 100%;
+  background-repeat: no-repeat;
+  padding-right: 2.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  height: 2.5rem;
+  line-height: 1.25rem;
+}
+
+/* Focus state with subtle glow */
+select.form-control:focus,
+.permissions-editor select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+}
+
+/* fallback for older browsers where custom arrow may not show well */
+select.form-control::-ms-expand {
+  display: none;
+}
+
+.select-compact {
+  padding-right: 1.6rem;
+  height: 2rem;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;

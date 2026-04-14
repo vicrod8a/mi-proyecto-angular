@@ -26,6 +26,7 @@ export class UserApiClient {
   }
 
   async login(email: string, password: string) {
+    // send explicit email field
     return this.request('/users/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -79,18 +80,34 @@ export class UserApiClient {
     return this.request(`/users/${id}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
   }
 
+  async deleteUserWithPassword(id: string, currentPassword: string, token?: string) {
+    const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    const body = JSON.stringify({ current_password: currentPassword });
+    return this.request(`/users/${id}`, { method: 'DELETE', headers, body });
+  }
+
   async setPermissions(id: string, permissions: string[], token?: string) {
     return this.request(`/users/${id}/permissions`, { method: 'PUT', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: JSON.stringify({ permissions }) });
   }
 
   async addPermission(id: string, permission: any, token?: string) {
     const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-    return this.request(`/users/${id}/permissions`, { method: 'POST', headers, body: JSON.stringify({ permission }) });
+    // Normalize input: if caller passed an object like { permission: 'x', group_id }, send group_id at top-level
+    let bodyPayload: any = {};
+    if (permission && typeof permission === 'object') {
+      bodyPayload.permission = permission.permission || permission.name || permission.id || String(permission);
+      if (permission.group_id) bodyPayload.group_id = permission.group_id;
+      if (permission.groupId) bodyPayload.group_id = permission.groupId;
+    } else {
+      bodyPayload = { permission };
+    }
+    return this.request(`/users/${id}/permissions`, { method: 'POST', headers, body: JSON.stringify(bodyPayload) });
   }
 
-  async removePermission(id: string, permissionIdentifier: string | number, token?: string) {
+  async removePermission(id: string, permissionIdentifier: string | number, token?: string, groupId?: string) {
     // permissionIdentifier may be a numeric id or a name string
-    const path = `/users/${id}/permissions/${encodeURIComponent(String(permissionIdentifier))}`;
+    let path = `/users/${id}/permissions/${encodeURIComponent(String(permissionIdentifier))}`;
+    if (groupId) path += `?group_id=${encodeURIComponent(String(groupId))}`;
     return this.request(path, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
   }
 }

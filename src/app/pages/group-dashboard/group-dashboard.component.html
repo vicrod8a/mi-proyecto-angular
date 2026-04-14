@@ -1,11 +1,7 @@
-<div class="p-6 bg-gray-100 min-h-screen">
+  <div class="p-6 bg-gray-100 min-h-screen">
   <h2 class="text-2xl font-bold mb-4">Dashboard de grupo {{ groupName }}</h2>
-  <div *ngIf="!ticketRead()" class="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded">
-    No tienes permiso para ver tickets en este grupo. Solicita el permiso <strong>ticket.read</strong> para acceder al tablero y la lista.
-  </div>
 
-
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" *ngIf="ticketRead()">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white shadow rounded p-4">
       <h3 class="font-semibold">Pendientes</h3>
       <p>{{ counts()['pendiente'] }}</p>
@@ -24,7 +20,7 @@
     </div>
   </div>
 
-  <div class="mb-6 flex space-x-4" *ngIf="ticketRead()">
+  <div class="mb-6 flex space-x-4">
     <button
       (click)="setViewMode('kanban')"
       [class.bg-blue-500]="viewMode === 'kanban'"
@@ -39,7 +35,7 @@
       class="px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-300">
       Vista Lista
     </button>
-    <button *ngIf="permissionService.hasPermission('ticket.create')" (click)="createTicket()" class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300">
+    <button *ifHasPermission="'ticket.create'; group: groupId" (click)="createTicket()" class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-300">
       Crear Ticket
     </button>
     <button
@@ -56,7 +52,7 @@
     </button>
   </div>
 
-  <div *ngIf="ticketRead()">
+  <div>
     <div *ngIf="tickets.length === 0" class="p-6 bg-white rounded shadow text-center text-gray-600">
       Este grupo no tiene tickets todavía.
     </div>

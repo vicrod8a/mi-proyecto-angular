@@ -10,6 +10,31 @@ fastify.register(cors, {
   allowedHeaders: ['Content-Type', 'Authorization']
 });
 
+// Global response hook: normalize to universal schema
+fastify.addHook('onSend', async (request, reply, payload) => {
+  try {
+    let parsed: any = payload;
+    if (typeof payload === 'string') {
+      try { parsed = JSON.parse(payload); } catch (e) { parsed = payload; }
+    }
+    if (parsed && typeof parsed === 'object') {
+      // Already in the internal wrapped format: leave as-is
+      if (parsed.statusCode && Object.prototype.hasOwnProperty.call(parsed, 'intOpCode')) {
+        return payload;
+      }
+      // Already in the public API format { success, data }: return directly (avoid double-wrapping)
+      if (Object.prototype.hasOwnProperty.call(parsed, 'success') && Object.prototype.hasOwnProperty.call(parsed, 'data')) {
+        return typeof payload === 'string' ? payload : JSON.stringify(parsed);
+      }
+    }
+    const status = reply.statusCode || 200;
+    const intOp = `SxGS${String(status)}`; // GS = Group Service
+    return JSON.stringify({ statusCode: status, intOpCode: intOp, data: parsed === undefined || parsed === '' ? null : parsed });
+  } catch (e) {
+    return payload;
+  }
+});
+
 // Helper: try to decode JWT payload and return the parsed payload object
 function getJwtPayloadFromAuthHeader(authHeader: string | undefined): any | null {
   try {
@@ -377,6 +402,111 @@ fastify.post('/groups/join-by-code', async (request: any, reply) => {
     return reply.send({ success: true, data: mapped });
   } catch (e: any) {
     fastify.log.error({ err: e }, 'Join by code error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// --- Group-scoped permissions endpoints (permisos_grupo) ---
+// List permissions for a group, aggregated by user
+fastify.get('/groups/:id/permissions', async (request: any, reply) => {
+  const id = request.params.id;
+  try {
+    // fetch group-scoped permissions
+    const { data: gpData, error: gpErr } = await supabase.from('permisos_grupo').select('user_id, permission').eq('group_id', id);
+    if (gpErr) return reply.status(500).send({ success: false, message: gpErr.message });
+
+    // group by user for group-scoped perms
+    const groupMap: Record<string, Set<string>> = {};
+    (gpData || []).forEach((r: any) => {
+      const uid = String(r.user_id);
+      if (!groupMap[uid]) groupMap[uid] = new Set();
+      if (r.permission) groupMap[uid].add(String(r.permission));
+    });
+
+    // collect user ids we care about (from group-scoped entries and also group members)
+    const userIdSet = new Set<string>(Object.keys(groupMap));
+    const { data: membersData, error: mErr } = await supabase.from('group_members').select('user_id').eq('group_id', id);
+    if (mErr) fastify.log.warn({ err: mErr }, 'Could not query group_members while enriching permissions');
+    (membersData || []).forEach((m: any) => { if (m && m.user_id) userIdSet.add(String(m.user_id)); });
+
+    const userIds = Array.from(userIdSet).map(s => Number(s)).filter(n => Number.isInteger(n));
+
+    // fetch global permissions for these users and merge
+    const globalMap: Record<string, Set<string>> = {};
+    if (userIds.length) {
+      const { data: upData, error: upErr } = await supabase
+        .from('user_permissions')
+        .select('user_id, permissions(name)')
+        .in('user_id', userIds);
+      if (upErr) {
+        fastify.log.warn({ err: upErr }, 'Failed to fetch user_permissions for permission enrichment');
+      } else {
+        (upData || []).forEach((r: any) => {
+          const uid = String(r.user_id);
+          if (!globalMap[uid]) globalMap[uid] = new Set();
+          const perm = r.permissions;
+          if (perm) {
+            if (Array.isArray(perm)) {
+              perm.forEach((p: any) => { if (p && p.name) globalMap[uid].add(String(p.name)); });
+            } else if (perm.name) {
+              globalMap[uid].add(String(perm.name));
+            }
+          }
+        });
+      }
+    }
+
+    // merge groupMap and globalMap into output
+    const allKeys = new Set<string>([...Object.keys(groupMap), ...Object.keys(globalMap)]);
+    const out = Array.from(allKeys).map(uid => {
+      const set = new Set<string>();
+      if (groupMap[uid]) groupMap[uid].forEach(p => set.add(p));
+      if (globalMap[uid]) globalMap[uid].forEach(p => set.add(p));
+      return { user_id: uid, permissions: Array.from(set) };
+    });
+    return reply.send({ success: true, data: out });
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'List group permissions error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// Add a permission for a user in a group
+fastify.post('/groups/:id/permissions', async (request: any, reply) => {
+  const id = request.params.id;
+  const { user_id, permission } = request.body || {};
+  if (!user_id || !permission) return reply.status(400).send({ success: false, message: 'user_id and permission required' });
+  try {
+    const { error } = await supabase.from('permisos_grupo').insert({ group_id: id, user_id: user_id, permission }).select();
+    if (error) {
+      // ignore duplicate key errors
+      if (String(error.message || '').toLowerCase().includes('duplicate')) {
+        return reply.send({ success: true, data: { message: 'already exists' } });
+      }
+      fastify.log.error({ err: error }, 'Insert permiso_grupo error');
+      return reply.status(500).send({ success: false, message: error.message });
+    }
+    return reply.send({ success: true, data: { user_id, permission } });
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'Add group permission error');
+    return reply.status(500).send({ success: false, message: 'Internal error' });
+  }
+});
+
+// Remove a permission for a user in a group
+fastify.delete('/groups/:id/permissions', async (request: any, reply) => {
+  const id = request.params.id;
+  const { user_id, permission } = request.body || {};
+  if (!user_id || !permission) return reply.status(400).send({ success: false, message: 'user_id and permission required' });
+  try {
+    const { error } = await supabase.from('permisos_grupo').delete().eq('group_id', id).eq('user_id', user_id).eq('permission', permission);
+    if (error) {
+      fastify.log.error({ err: error }, 'Delete permiso_grupo error');
+      return reply.status(500).send({ success: false, message: error.message });
+    }
+    return reply.send({ success: true, data: { user_id, permission } });
+  } catch (e: any) {
+    fastify.log.error({ err: e }, 'Remove group permission error');
     return reply.status(500).send({ success: false, message: 'Internal error' });
   }
 });

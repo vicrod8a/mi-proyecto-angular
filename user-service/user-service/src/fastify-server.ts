@@ -16,6 +16,69 @@ fastify.register(cors, {
 });
 fastify.register(jwt, { secret: 'supersecret' });
 
+// Tolerant JSON parser: Fastify by default rejects invalid JSON strictly.
+// PowerShell/curl on Windows can produce payloads with subtle quoting/encoding
+// issues that cause Fastify to return 400 before our handler runs. Add a
+// tolerant parser that attempts to recover from common problems (trim BOM,
+// accept strings that use single quotes) while still failing for truly
+// invalid payloads.
+try {
+  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+    try {
+      // body may already be a string
+      const raw = typeof body === 'string' ? body : body.toString('utf8');
+      let s = raw.trim();
+      // remove BOM if present
+      if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+      try {
+        const parsed = JSON.parse(s);
+        return done(null, parsed);
+      } catch (e) {
+        // Attempt a couple of common recoveries:
+        // 1) Replace single quotes with double quotes when keys/strings are single-quoted
+        // 2) Trim surrounding single quotes that some curl variants add
+        const attempt = s.replace(/^'+|'+$/g, '').replace(/'/g, '"');
+        try {
+          const parsed2 = JSON.parse(attempt);
+          return done(null, parsed2);
+        } catch (e2) {
+          // Give one last try: if body is empty or only whitespace, return null
+          if (!s) return done(null, {});
+          // otherwise return the original parse error
+          const err = new Error('Body is not valid JSON but content-type is set to \"application/json\"');
+          return done(err, undefined);
+        }
+      }
+    } catch (ex) {
+      const err = new Error('Failed to parse request body');
+      return done(err, undefined);
+    }
+  });
+} catch (e) {
+  // ignore if parser already registered or in environments where this fails
+  fastify.log && fastify.log.warn({ err: e }, 'could not add tolerant JSON parser');
+}
+
+// Global response hook: wrap non-normalized responses into the universal schema
+fastify.addHook('onSend', async (request, reply, payload) => {
+  try {
+    // payload may be string or Buffer or object
+    let parsed: any = payload;
+    if (typeof payload === 'string') {
+      try { parsed = JSON.parse(payload); } catch (e) { parsed = payload; }
+    }
+    // If already follows the universal schema, forward as-is
+    if (parsed && typeof parsed === 'object' && parsed.statusCode && Object.prototype.hasOwnProperty.call(parsed, 'intOpCode')) {
+      return payload;
+    }
+    const status = reply.statusCode || 200;
+    const intOp = `SxUS${String(status)}`;
+    return JSON.stringify({ statusCode: status, intOpCode: intOp, data: parsed === undefined || parsed === '' ? null : parsed });
+  } catch (e) {
+    return payload;
+  }
+});
+
 
 
 // Health check
@@ -87,17 +150,25 @@ fastify.post('/register', async (request, reply) => {
 
 // Login endpoint (dummy, replace with real logic)
 fastify.post('/login', async (request, reply) => {
-  const { email, password } = request.body as any;
-  if (!email || !password) {
+  // normalize body: may be parsed object or raw JSON string
+  let b: any = request.body as any;
+  if (typeof b === 'string') {
+    try { b = JSON.parse(b); } catch (e) { /* keep as string */ }
+  }
+  // log body for diagnostics when missing fields
+  const { identifier, email, password } = (b || {});
+  const emailValue = email || identifier;
+  if (!emailValue || !password) {
+    fastify.log.info({ receivedBody: b }, 'Login missing fields (expecting email and password)');
     return reply.status(400).send({ success: false, message: 'Faltan campos requeridos' });
   }
 
   try {
-    // Try to retrieve user by email first (safer when email contains special chars)
+    // Retrieve user by email only (do not fallback to username)
     const { data: userByEmail, error: errEmail } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('email', emailValue)
       .maybeSingle();
 
     if (errEmail) {
@@ -105,22 +176,7 @@ fastify.post('/login', async (request, reply) => {
       return reply.status(500).send({ success: false, message: 'Error en autenticación' });
     }
 
-    let user = userByEmail;
-
-    // If not found by email, try username
-    if (!user) {
-      const { data: userByUsername, error: errUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', email)
-        .maybeSingle();
-
-      if (errUser) {
-        fastify.log.error({ err: errUser }, 'Supabase select by username error');
-        return reply.status(500).send({ success: false, message: 'Error en autenticación' });
-      }
-      user = userByUsername;
-    }
+    const user = userByEmail;
 
     if (!user) return reply.status(401).send({ success: false, message: 'Credenciales incorrectas' });
 

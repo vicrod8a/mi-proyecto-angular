@@ -90,6 +90,50 @@
             <button class="btn btn-sm btn-danger" (click)="deleteGroup(group.id)" *ifHasPermission="'group.delete'">
               Eliminar
             </button>
+            <button class="btn btn-sm btn-secondary" (click)="toggleExpand(group.id)" *ifHasPermission="'group.manage'">
+              Miembros
+            </button>
+            <button class="btn btn-sm btn-secondary" (click)="openPermissionsEditor(group.id)" *ifHasPermission="'group.manage'">
+              Permisos
+            </button>
+          </div>
+
+          <div class="group-extra" *ngIf="expandedGroupId === group.id">
+            <h4>Miembros</h4>
+            <div class="members-list">
+              <div *ngFor="let m of group.membersList">
+                <span>{{ m }}</span>
+                <button class="btn btn-xs btn-link" (click)="removeMemberFromGroup(m, group.id)" *ifHasPermission="'group.manage'">Quitar</button>
+                <button class="btn btn-xs btn-link" (click)="openPermissionsEditor(group.id, m)" *ifHasPermission="'group.manage'">Permisos</button>
+              </div>
+            </div>
+              <div class="add-member">
+                <input type="email" placeholder="Correo electrónico" [(ngModel)]="addMemberEmail" />
+                <button class="btn btn-sm btn-primary" (click)="addMemberToGroup(group)">Enviar invitación</button>
+              </div>
+          </div>
+          <div class="permissions-editor" *ngIf="permissionsEditor.groupId === group.id">
+            <h4>Editar permisos para grupo</h4>
+            <div *ngIf="permissionsEditor.userId === null">
+              <p>Selecciona un usuario para editar sus permisos en este grupo:</p>
+              <select (change)="openPermissionsEditor(group.id, $any($event.target).value)">
+                <option value="">-- seleccionar --</option>
+                <option *ngFor="let u of users" [value]="u.id">{{ u.username || u.email || u.id }}</option>
+              </select>
+            </div>
+            <div *ngIf="permissionsEditor.userId">
+              <p>Usuario: {{ getUserDisplayName(permissionsEditor.userId) }}</p>
+              <div class="perm-list">
+                <label *ngFor="let p of ticketPermissions()">
+                  <input type="checkbox" [checked]="permissionsEditor.selected.includes(p)" (change)="togglePermissionForUser(p)" /> {{ p }}
+                </label>
+              </div>
+              <div class="perm-actions">
+                <button class="btn btn-sm btn-primary" (click)="assignAllTicketPermissionsToEditor()">Asignar todos</button>
+                <button class="btn btn-sm btn-warning" (click)="removeAllTicketPermissionsFromEditor()">Quitar todos</button>
+                <button class="btn btn-sm btn-secondary" (click)="permissionsEditor = { groupId: null, userId: null, selected: [] }">Cerrar</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

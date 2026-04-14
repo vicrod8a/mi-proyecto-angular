@@ -53,7 +53,7 @@ export class TicketDetailComponent implements OnInit {
     private fb: FormBuilder,
     private userService: UserService,
     private groupService: GroupService,
-    private permissionService: PermissionService,
+    public permissionService: PermissionService,
     private messageService: MessageService
   ) {
     this.editForm = this.fb.group({
@@ -176,6 +176,12 @@ export class TicketDetailComponent implements OnInit {
           console.log('[TicketDetail] Found ticket:', this.ticket);
           // populate group members dropdown
           this.loadGroupMembers(this.ticket.groupId).catch(() => {});
+          // Refresh permission set scoped to this ticket's group so ticket.* checks are group-scoped
+          try {
+            await this.permissionService.refreshPermissionsForGroup(String(this.ticket.groupId));
+          } catch (e) {
+            console.warn('[TicketDetail] refreshPermissionsForGroup failed', e);
+          }
           // use assigneeId if available for the form; fall back to assignedTo name
           const assignedToValue = (this.ticket as any).assigneeId || this.ticket.assignedTo || '';
           const deadlineStr = this.ticket.deadline ? (this.ticket.deadline instanceof Date ? this.ticket.deadline.toISOString().split('T')[0] : new Date(this.ticket.deadline).toISOString().split('T')[0]) : '';

@@ -1,0 +1,56 @@
+Mi proyecto Victor Emanuel Rodríguez Ochoa
+
+
+- Frontend: https://github.com/vicrod8a/mi-proyecto-angular
+- API Gateway: https://github.com/vicrod8a/mi-proyecto-angular/tree/main/apigateway
+- Group Service: https://github.com/vicrod8a/mi-proyecto-angular/tree/main/group-service
+- Ticket Service: https://github.com/vicrod8a/mi-proyecto-angular/tree/main/ticket-service
+- User Service: https://github.com/vicrod8a/mi-proyecto-angular/tree/main/user-service/user-service
+
+
+
+- Frontend (local dev): http://localhost:4200 (ejecución con `npm start` desde workspace raíz)
+  - Método de acceso: GET (Single Page App)
+
+npm start
+
+- API Gateway (local): http://127.0.0.1:3000
+  - Health check (GET): http://127.0.0.1:3000/health  -> Respuesta esperada: { "status": "ok" }
+  - Autenticación: Bearer JWT en header `Authorization: Bearer <token>` (gateway valida y reenvía)
+cd apigateway
+npm run start
+
+
+- Group Service (local): http://127.0.0.1:3003
+  - Endpoints relevantes:
+    - GET /groups -> headers: Authorization: Bearer <token>
+    - GET /groups/:id -> headers: Authorization: Bearer <token>
+    - GET /groups/:id/permissions -> headers: Authorization: Bearer <token>
+    - POST /groups/:id/permissions -> body example: { "user_id": 123, "permission": "ticket.read" }
+    - DELETE /groups/:id/permissions -> body example: { "user_id": 123, "permission": "ticket.read" }
+
+    cd ..\mi-proyecto\group-service
+    npx ts-node src/fastify-server.ts
+
+- Ticket Service (local): http://127.0.0.1:3010
+  - Endpoints relevantes:
+    - GET /tickets?groupId=<id> -> headers: Authorization: Bearer <token>
+    - GET /tickets/:id -> headers: Authorization: Bearer <token>
+    - POST /tickets -> body example: { "title": "Titulo", "description": "Desc", "group_id": 25, "creator_user_id": 12 }
+    - PUT /tickets/:id -> body example: { "title": "Nuevo titulo", "status": "open" }
+
+    cd .\ticket-service\
+    npm start
+
+- User Service (local): http://127.0.0.1:3001
+  - Endpoints relevantes:
+    - POST /login -> body example: { "email": "user@example.com", "password": "secret" }
+    - GET /users/permissions -> headers: Authorization: Bearer <token>
+    - POST /users/:id/permissions -> body example: { "permission": "permission.manage" } OR { "permission": { "name": "permission.manage" } }
+    - DELETE /users/:id/permissions/:perm -> no body
+
+    cd user-service/user-service         
+    npx ts-node src/fastify-server.ts
+
+
+-

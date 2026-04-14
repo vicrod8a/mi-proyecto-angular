@@ -12,6 +12,7 @@ export interface UserProfile {
   address: string;
   birthDate: string;
   password?: string;
+  currentPassword?: string;
   confirmPassword?: string;
   avatar?: string;
   role?: string;
@@ -100,6 +101,8 @@ export class ProfileService {
     };
     // include password when provided
     if (userProfile.password) updateData.password = userProfile.password;
+    // include current password when provided (backend may require it to authorize password changes)
+    if ((userProfile as any).currentPassword) (updateData as any).currentPassword = (userProfile as any).currentPassword;
 
     try {
       const ok = await this.userService.persistUserUpdate(userProfile.id!, updateData as any);
@@ -119,11 +122,19 @@ export class ProfileService {
     }
   }
 
-  deleteUser(): void {
+  async deleteUser(currentPassword?: string): Promise<boolean> {
     const currentUser = this.userService.getCurrentUser();
-    if (currentUser) {
-      this.userService.deleteUser(currentUser.id);
+    if (!currentUser) return false;
+    try {
+      const ok = await this.userService.deleteUser(currentUser.id, currentPassword);
+      if (ok) this.userSubject.next(null);
+      return ok;
+    } catch (e) {
+      try {
+        this.userService.deleteUser(currentUser.id);
+      } catch {}
       this.userSubject.next(null);
+      return false;
     }
   }
 

@@ -3,7 +3,8 @@
     "ticket.create",
     "ticket.read",
     "ticket.update",
-    "ticket.delete"
+    "ticket.delete",
+    "ticket.move"
   ],
   "groups": [
     "group.create",

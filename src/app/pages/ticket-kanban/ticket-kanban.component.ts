@@ -33,7 +33,7 @@ export class TicketKanbanComponent implements OnInit, OnChanges {
     private ticketService: TicketService,
     private router: Router,
     private route: ActivatedRoute,
-    private permissionService: PermissionService,
+    public permissionService: PermissionService,
     private messageService: MessageService,
     private userService: UserService
   ) { }
@@ -44,7 +44,12 @@ export class TicketKanbanComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['groupId']) {
-      this.loadTickets();
+      (async () => {
+        try {
+          if (this.groupId) await this.permissionService.refreshPermissionsForGroup(this.groupId);
+        } catch (e) {}
+        this.loadTickets();
+      })();
     }
   }
 
@@ -133,6 +138,14 @@ export class TicketKanbanComponent implements OnInit, OnChanges {
     
     if (!this.draggedTicket) return;
 
+    // Check whether current user has permission to move tickets in Kanban
+    if (!this.permissionService.hasPermission('ticket.move')) {
+      this.messageService.add({ severity: 'warn', summary: 'No permitido', detail: 'No tienes permiso para mover tickets' });
+      this.draggedTicket = null;
+      this.draggedFrom = null;
+      return;
+    }
+
     // Update ticket status
     const updatedTicket: Ticket = {
       ...this.draggedTicket,
@@ -170,7 +183,7 @@ export class TicketKanbanComponent implements OnInit, OnChanges {
 
   deleteTicket(ticket: Ticket, event: Event): void {
     event.stopPropagation(); // Prevent triggering the click on the card
-    if (!this.ticketService.canDelete(ticket)) {
+    if (!this.permissionService.hasPermission('ticket.delete') || !this.ticketService.canDelete(ticket)) {
       this.messageService.add({ severity: 'warn', summary: 'No permitido', detail: 'No puedes eliminar este ticket' });
       return;
     }
